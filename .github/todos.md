@@ -317,174 +317,95 @@ RetroArch has a web player but **NO PS2/GameCube cores** for web:
 
 ---
 
-## ✅ Phase 5: Sunshine + Moonlight-Web Streaming (Completed)
+## 🔄 Phase 5: UX & Stability Improvements (In Progress)
 
 ### Summary
 
-**Problem**: PS2/GameCube games require powerful emulators (PCSX2/Dolphin) that can't run in WebAssembly. Current "external emulator" solution plays games on PC monitor, not streamed to phone.
+**Problem**: The app has rough edges in UX and several code quality issues that affect stability and developer experience.
 
-**Solution**: Integrate Sunshine (streaming server) + moonlight-web-stream (browser client) for PS2/GC games:
+**Solution**: Polish the user experience and fix code issues:
 
-- Sunshine captures PCSX2/Dolphin with hardware encoding (NVENC/QuickSync/AMF)
-- moonlight-web-stream converts Moonlight protocol → WebRTC
-- Phone browser receives video stream + sends controller input
-- EmulatorJS remains for all other systems (NES, SNES, GB, GBA, N64, PSX, etc.)
+- Fix TypeScript/linting errors
+- Add proper loading states and error handling
+- Improve mobile responsiveness
+- Add visual feedback and animations
+- Clean up documentation
 
-### Architecture
+### Analysis
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│ Emulation Tiers (Updated)                                       │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│ Tier 1: EmulatorJS (In-Browser) ✅ Unchanged                    │
-│   • NES, SNES, GB, GBA, N64, DS, PSX, PSP, Genesis, etc.       │
-│   • Full browser integration                                    │
-│   • Save states, SRM saves to server                            │
-│                                                                 │
-│ Tier 2: Sunshine + Moonlight-Web (NEW) 🔄 In Progress           │
-│   • PS2 games via PCSX2                                         │
-│   • GameCube/Wii games via Dolphin                              │
-│   • Hardware-accelerated streaming to browser                   │
-│   • Low latency via WebRTC                                      │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+**Current Issues Identified**:
 
-Data Flow:
-
-┌──────────────┐     ┌──────────────┐     ┌──────────────────────┐
-│ Our Next.js  │────►│ Sunshine     │────►│ PCSX2/Dolphin        │
-│ App (3000)   │ API │ (47990)      │ Run │ (Native Emulator)    │
-└──────────────┘     └──────┬───────┘     └──────────────────────┘
-                           │ Moonlight Protocol
-                           ▼
-                    ┌──────────────┐
-                    │ moonlight-   │
-                    │ web-stream   │
-                    │ (8080)       │
-                    └──────┬───────┘
-                           │ WebRTC
-                           ▼
-                    ┌──────────────┐
-                    │ Phone PWA    │
-                    │ (Browser)    │
-                    └──────────────┘
-```
-
-### Prerequisites (User Must Install)
-
-1. **Sunshine** - Self-hosted game streaming server
-   - Download: https://github.com/LizardByte/Sunshine/releases
-   - Default ports: 47989 (RTSP), 47990 (Web UI/API)
-   - Requires admin password setup on first run
-
-2. **moonlight-web-stream** - Browser-based Moonlight client
-   - Download: https://github.com/MrCreativ3001/moonlight-web-stream/releases
-   - Default port: 8080
-   - Must pair with Sunshine (enter PIN from Sunshine Web UI)
-
-3. **PCSX2** (for PS2 games)
-   - Download: https://pcsx2.net/downloads
-   - CLI: `pcsx2.exe "{ROM}" --fullscreen --nogui`
-
-4. **Dolphin** (for GameCube/Wii games)
-   - Download: https://dolphin-emu.org/download
-   - CLI: `Dolphin.exe -e "{ROM}" -b`
-
-### Sunshine API Reference
-
-```
-Base URL: https://localhost:47990 (requires Basic Auth)
-
-GET  /api/apps          - List all apps
-POST /api/apps          - Add/update app
-POST /api/apps/close    - Close running app
-DELETE /api/apps/{idx}  - Delete app
-
-App JSON Format:
-{
-  "name": "Game Name",
-  "cmd": "C:\\path\\to\\emulator.exe \"{ROM}\"",
-  "working_dir": "C:\\path\\to",
-  "index": -1,  // -1 for new, existing index for update
-  "image-path": "C:\\path\\to\\cover.png",
-  "auto-detach": true,
-  "elevated": false
-}
-```
+1. **TypeScript errors**: State comparison issue in EmulatorContent.tsx
+2. **Missing loading states**: Some API calls don't show loading feedback
+3. **Mobile UX**: Header controls could be more touch-friendly
+4. **Error recovery**: Limited retry options when things fail
+5. **Documentation**: README still has Sunshine content that should be removed
 
 ### Tasks
 
-#### Step 1: Sunshine Service Module ✅
+#### Step 1: Fix TypeScript & Linting Errors
 
-**Logic**: Create a service that communicates with Sunshine's REST API to manage emulator apps.
+**Logic**: Clean up compile-time errors to improve code quality and prevent runtime issues.
 
-- ✅ 1.1 Create `src/lib/sunshine-service.ts` with API client
-- ✅ 1.2 Implement `checkConnection()` - verify Sunshine is running
-- ✅ 1.3 Implement `listApps()` - get registered apps
-- ✅ 1.4 Implement `addApp(game)` - register emulator launch command
-- ✅ 1.5 Implement `closeApp()` - stop current streaming session
-- ✅ 1.6 Add proper error handling for connection failures
+- ✅ 1.1 Fix EmulatorContent.tsx state comparison (`"ready"` vs allowed types)
+- ✅ 1.2 Update Tailwind classes to modern syntax (bg-gradient-to-b → bg-linear-to-b)
+- ✅ 1.3 Fix aspect ratio classes (aspect-[4/3] → aspect-4/3)
+- ✅ 1.4 Verify no unused imports or variables
+- ✅ 1.5 Remove leftover stream directory (missed during Sunshine cleanup)
+- ✅ 1.6 Fix SYSTEM_CORES type to handle external systems
 
-#### Step 2: Configuration & Settings ✅
+#### Step 2: Improve Error Handling & Recovery
 
-**Logic**: Users need to configure Sunshine URL, credentials, emulator paths, and moonlight-web URL.
+**Logic**: Users should always have a path forward when something fails.
 
-- ✅ 2.1 Add Sunshine settings to `src/lib/emulator-config.ts` (in sunshine-service.ts)
-- ✅ 2.2 Create `/api/sunshine/config/route.ts` for saving settings
-- ✅ 2.3 Update settings page with Sunshine section
-- ✅ 2.4 Add moonlight-web-stream URL setting
-- ✅ 2.5 Add connection test button with status indicator
-- ✅ 2.6 Store credentials securely (in data/sunshine-config.json)
+- 🔲 2.1 Add retry button to game library fetch failures
+- 🔲 2.2 Add retry button to profile fetch failures
+- 🔲 2.3 Better error messages with actionable suggestions
+- 🔲 2.4 Graceful degradation when features unavailable
 
-#### Step 3: Game Type Detection ✅
+#### Step 3: Enhance Loading States
 
-**Logic**: Distinguish between EmulatorJS games and Sunshine-streamed games based on system.
+**Logic**: Users need visual feedback during async operations.
 
-- ✅ 3.1 Add `streamingType` to game types: `'emulatorjs' | 'sunshine'`
-- ✅ 3.2 Update types/index.ts with `getStreamingType()` helper
-- ✅ 3.3 PS2 (`psx2`) and GameCube (`gc`) use `'sunshine'`
-- ✅ 3.4 All other systems default to `'emulatorjs'`
-- ✅ 3.5 Update GameCard UI to show "📡 Stream" badge
+- 🔲 3.1 Add skeleton loaders for game library
+- 🔲 3.2 Add loading indicator for profile switching
+- 🔲 3.3 Add progress feedback for game loading
+- 🔲 3.4 Disable buttons during operations to prevent double-clicks
 
-#### Step 4: API Endpoints ✅
+#### Step 4: Mobile UX Improvements
 
-**Logic**: Create API endpoints for the frontend to interact with Sunshine.
+**Logic**: Many users will play on mobile devices.
 
-- ✅ 4.1 Create `/api/sunshine/status/route.ts` - check connection
-- ✅ 4.2 Create `/api/sunshine/config/route.ts` - GET/POST config
-- ✅ 4.3 Create `/api/sunshine/launch/route.ts` - launch game
-- 🔲 4.4 Create `/api/sunshine/close/route.ts` - close session (deferred)
-- 🔲 4.5 Proxy moonlight-web-stream if needed (not required)
+- 🔲 4.1 Larger touch targets for buttons (min 44px)
+- 🔲 4.2 Better spacing between interactive elements
+- 🔲 4.3 Swipe gestures for navigation (optional)
+- 🔲 4.4 Optimize game library grid for small screens
 
-#### Step 5: Streaming Page ✅
+#### Step 5: Visual Polish
 
-**Logic**: Create a new page that embeds moonlight-web-stream player and launches games.
+**Logic**: Small visual improvements make the app feel more polished.
 
-- ✅ 5.1 Create `/stream/[gameId]/page.tsx` for Sunshine games
-- ✅ 5.2 Implement game launch on page load via Sunshine API
-- ✅ 5.3 Embed moonlight-web-stream player in iframe
-- ✅ 5.4 Add fullscreen toggle and controls overlay
-- ✅ 5.5 Handle connection errors gracefully
-- ✅ 5.6 Add "back to library" navigation
+- 🔲 5.1 Consistent transitions and animations
+- 🔲 5.2 Hover/focus states for all interactive elements
+- 🔲 5.3 Toast notifications for save/load feedback
+- 🔲 5.4 System-specific color theming consistency
 
-#### Step 6: Play Page Routing ✅
+#### Step 6: Documentation Cleanup
 
-**Logic**: Route users to correct page based on game's streaming type.
+**Logic**: Keep documentation accurate and up-to-date.
 
-- ✅ 6.1 Update page.tsx handleSelectGame to check streamingType
-- ✅ 6.2 EmulatorJS games → `/play?game=...` (existing)
-- ✅ 6.3 Sunshine games → `/stream/{gameId}` (new)
-- ✅ 6.4 Show not-configured state if Sunshine not set up
+- ✅ 6.1 Remove Sunshine content from README (now in ideas branch)
+- 🔲 6.2 Update copilot-instructions.md to remove Sunshine references
+- 🔲 6.3 Clean up todos.md (archive old completed phases)
+- 🔲 6.4 Add contributing guidelines if needed
 
-#### Step 7: Documentation ✅
+---
 
-**Logic**: Update all documentation with new architecture and setup instructions.
+## 📦 Archived: Phase 5 (Sunshine Streaming)
 
-- ✅ 7.1 Update README with Sunshine setup guide
-- ✅ 7.2 Update `copilot-instructions.md` architecture section
-- ✅ 7.3 Add troubleshooting for common Sunshine issues
-- ✅ 7.4 Document moonlight-web-stream pairing process
+> **Note**: This feature has been moved to the `ideas/sunshine-streaming` branch.
+> It provides PS2/GameCube streaming via Sunshine + moonlight-web-stream.
+> This is parked for now while we focus on core UX improvements.
 
 ---
 

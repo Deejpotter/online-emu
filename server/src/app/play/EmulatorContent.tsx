@@ -69,7 +69,7 @@ interface EmulatorErrorMessage {
 
 interface EmulatorStateMessage {
 	type: "stateChanged";
-	state: "playing" | "paused" | "loading";
+	state: "playing" | "paused" | "loading" | "ready";
 }
 
 type EmulatorIncomingMessage =

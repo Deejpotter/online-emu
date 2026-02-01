@@ -119,7 +119,7 @@ export function GameCard({ game, onSelect }: GameCardProps) {
 			)}
 
 			{/* Cover Art / Placeholder */}
-			<div className="aspect-[4/3] bg-zinc-900 flex items-center justify-center relative">
+			<div className="aspect-4/3 bg-zinc-900 flex items-center justify-center relative">
 				{game.coverArt ? (
 					<img
 						src={game.coverArt}

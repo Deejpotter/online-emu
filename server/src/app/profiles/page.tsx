@@ -143,14 +143,14 @@ export default function ProfilesPage() {
 
 	if (loading) {
 		return (
-			<div className="min-h-screen bg-gradient-to-b from-zinc-900 to-zinc-950 flex items-center justify-center">
+			<div className="min-h-screen bg-linear-to-b from-zinc-900 to-zinc-950 flex items-center justify-center">
 				<div className="text-zinc-400">Loading profiles...</div>
 			</div>
 		);
 	}
 
 	return (
-		<div className="min-h-screen bg-gradient-to-b from-zinc-900 to-zinc-950 flex flex-col items-center justify-center p-4">
+		<div className="min-h-screen bg-linear-to-b from-zinc-900 to-zinc-950 flex flex-col items-center justify-center p-4">
 			{/* Header */}
 			<div className="text-center mb-12">
 				<span className="text-6xl mb-4 block">🎮</span>
@@ -192,7 +192,7 @@ export default function ProfilesPage() {
 				{/* Add New Profile Button */}
 				<button
 					onClick={() => setShowCreate(true)}
-					className="flex flex-col items-center justify-center p-6 rounded-xl border-2 border-dashed border-zinc-700 hover:border-zinc-500 text-zinc-500 hover:text-zinc-300 transition-all duration-200 w-32 h-[140px]"
+					className="flex flex-col items-center justify-center p-6 rounded-xl border-2 border-dashed border-zinc-700 hover:border-zinc-500 text-zinc-500 hover:text-zinc-300 transition-all duration-200 w-32 h-35"
 				>
 					<span className="text-4xl mb-2">➕</span>
 					<span className="text-sm">Add Profile</span>

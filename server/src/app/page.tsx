@@ -56,7 +56,7 @@ export default function Home() {
 	};
 
 	return (
-		<div className="min-h-screen bg-gradient-to-b from-zinc-900 to-zinc-950">
+		<div className="min-h-screen bg-linear-to-b from-zinc-900 to-zinc-950">
 			{/* Header */}
 			<header className="border-b border-zinc-800 bg-zinc-900/80 backdrop-blur-sm sticky top-0 z-50">
 				<div className="container mx-auto px-4 py-4 flex items-center justify-between">

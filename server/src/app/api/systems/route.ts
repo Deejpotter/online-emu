@@ -11,14 +11,15 @@ import type { ApiResponse, EmulatorSystem } from '@/types';
 interface SystemInfo {
   id: EmulatorSystem;
   name: string;
-  emulatorCore: string;
+  emulatorCore: string | undefined;
 }
 
 /**
  * Map of system IDs to EmulatorJS core names.
  * These correspond to the cores available in EmulatorJS.
+ * Note: External systems (ps2, gamecube) don't have EmulatorJS cores.
  */
-const SYSTEM_CORES: Record<EmulatorSystem, string> = {
+const SYSTEM_CORES: Partial<Record<EmulatorSystem, string>> = {
   nes: 'nes',
   snes: 'snes',
   gb: 'gb',
@@ -33,6 +34,7 @@ const SYSTEM_CORES: Record<EmulatorSystem, string> = {
   psp: 'psp',
   atari2600: 'atari2600',
   arcade: 'arcade',
+  // ps2 and gamecube don't have EmulatorJS cores - they use external emulators
 };
 
 /**
