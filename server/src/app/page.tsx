@@ -7,10 +7,6 @@
  * Profile System:
  * This page requires a profile to be selected (enforced by middleware).
  * Shows the current profile name in the header with option to switch profiles.
- *
- * Game Routing:
- * - EmulatorJS games (NES, SNES, GB, etc.) → /play?id={gameId}
- * - Sunshine games (PS2, GameCube) → /stream/{gameId}
  */
 
 "use client";
@@ -19,7 +15,6 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { GameLibrary, ServerStatus } from "./components";
 import type { Game } from "@/types";
-import { isExternalSystem } from "@/types";
 
 interface Profile {
 	id: string;
@@ -49,15 +44,8 @@ export default function Home() {
 	}, []);
 
 	const handleSelectGame = (game: Game) => {
-		// Route based on game's streaming type
-		// PS2/GameCube use Sunshine streaming, others use EmulatorJS
-		if (isExternalSystem(game.system)) {
-			// Sunshine streaming page
-			router.push(`/stream/${game.id}`);
-		} else {
-			// EmulatorJS player page
-			router.push(`/play?id=${game.id}`);
-		}
+		// Route to EmulatorJS player page
+		router.push(`/play?id=${game.id}`);
 	};
 
 	const handleSwitchProfile = () => {

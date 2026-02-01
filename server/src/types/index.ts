@@ -90,21 +90,6 @@ export interface ExternalEmulatorConfig {
 }
 
 /**
- * How a game is streamed to the client.
- * - 'emulatorjs': Runs in browser via EmulatorJS (default for most systems)
- * - 'sunshine': Streams via Sunshine + moonlight-web (for PS2/GameCube)
- */
-export type StreamingType = "emulatorjs" | "sunshine";
-
-/**
- * Determine the streaming type for a given system.
- * PS2 and GameCube use Sunshine streaming; all others use EmulatorJS.
- */
-export function getStreamingType(system: EmulatorSystem): StreamingType {
-	return isExternalSystem(system) ? "sunshine" : "emulatorjs";
-}
-
-/**
  * Represents a game ROM in the library.
  */
 export interface Game {
@@ -128,11 +113,6 @@ export interface Game {
 	description?: string;
 	/** Whether this game requires an external emulator */
 	isExternal?: boolean;
-	/**
-	 * How this game is streamed to the client.
-	 * Derived from system type - PS2/GameCube use 'sunshine', others use 'emulatorjs'.
-	 */
-	streamingType?: StreamingType;
 }
 
 /**
