@@ -54,7 +54,6 @@ This allows powerful consoles (PS1, N64) to run smoothly since the phone just de
 
 - `/public/emulator.html` - Static HTML page that hosts EmulatorJS
 - `/src/app/play/page.tsx` - React page with iframe wrapper
-- `/src/app/stream/page.tsx` - Streaming page that captures iframe canvas
 
 ### ⚠️ EmulatorJS Server Requirements
 
@@ -207,121 +206,30 @@ window.parent.postMessage({ type: "ready", canvas: canvasElement }, "*");
 - **Framework**: Next.js 16 (App Router) with TypeScript
 - **User Profiles**: Simple local profiles (no authentication required)
 - **Emulation**: EmulatorJS (self-hosted, runs in iframe)
-- **PS2/GameCube**: Sunshine + moonlight-web-stream (hardware-accelerated streaming)
+- **External Emulators**: PCSX2/Dolphin for PS2/GameCube (launches on PC)
 - **Real-time**: Socket.IO 4.8 for controller inputs
 - **Streaming**: WebRTC via simple-peer (canvas capture)
 - **Discovery**: bonjour-service (mDNS)
 - **PWA**: Installable web app with offline support
 
-## Sunshine Streaming (PS2/GameCube)
+## External Emulators (PS2/GameCube)
 
-PS2 and GameCube games use native emulators (PCSX2/Dolphin) with Sunshine for hardware-accelerated streaming.
+PS2 and GameCube games require desktop emulators (PCSX2/Dolphin) that run on the PC.
+These games launch in a separate window - they don't stream to the browser.
 
-### Architecture
+### How It Works
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│ Emulation Tiers                                                 │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│ Tier 1: EmulatorJS (In-Browser)                                 │
-│   • NES, SNES, GB, GBA, N64, DS, PSX, PSP, Genesis, etc.       │
-│   • Full browser integration, saves to server                   │
-│                                                                 │
-│ Tier 2: Sunshine + Moonlight-Web                                │
-│   • PS2 games via PCSX2                                         │
-│   • GameCube/Wii games via Dolphin                              │
-│   • Hardware-accelerated streaming to browser                   │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-### Streaming Flow
-
-```
-1. User clicks PS2/GC game in library
-2. Route to /stream/{gameId} instead of /play
-3. POST /api/sunshine/launch registers game in Sunshine
-4. Sunshine launches PCSX2/Dolphin with game ROM
-5. Sunshine captures screen with NVENC/QuickSync/AMF
-6. moonlight-web-stream (port 8080) receives Moonlight protocol
-7. moonlight-web-stream converts to WebRTC
-8. StreamContent.tsx embeds moonlight-web in iframe
-9. User plays with low-latency hardware-accelerated video
-```
+1. Configure emulator paths in Settings page
+2. PS2/GC games show "🖥️ PC" badge in library
+3. Clicking launches the game in PCSX2/Dolphin on the PC monitor
 
 ### Key Files
 
-- `src/lib/sunshine-service.ts` - API client for Sunshine REST API
-- `src/app/api/sunshine/status/route.ts` - Connection status endpoint
-- `src/app/api/sunshine/config/route.ts` - Configuration GET/POST
-- `src/app/api/sunshine/launch/route.ts` - Game launch endpoint
-- `src/app/stream/[gameId]/page.tsx` - Streaming page wrapper
-- `src/app/stream/[gameId]/StreamContent.tsx` - moonlight-web iframe
-- `src/app/settings/page.tsx` - Sunshine configuration UI
-- `data/sunshine-config.json` - Stored configuration
-
-### StreamingType
-
-Games are categorized by `streamingType`:
-
-```typescript
-type StreamingType = "emulatorjs" | "sunshine";
-
-// PS2 and GameCube use Sunshine
-const SUNSHINE_SYSTEMS = ["ps2", "psx2", "gc", "gamecube", "wii"];
-
-function getStreamingType(system: string): StreamingType {
-	return SUNSHINE_SYSTEMS.includes(system.toLowerCase())
-		? "sunshine"
-		: "emulatorjs";
-}
-```
-
-### Sunshine API Reference
-
-Base URL: `https://localhost:47990` (requires Basic Auth)
-
-```
-GET  /api/apps          - List all apps
-POST /api/apps          - Add/update app (index: -1 for new)
-POST /api/apps/close    - Close running app
-DELETE /api/apps/{idx}  - Delete app by index
-```
-
-App JSON format for registration:
-```json
-{
-  "name": "GameName",
-  "cmd": "C:\\path\\to\\emulator.exe \"{ROM}\"",
-  "index": -1,
-  "auto-detach": true
-}
-```
-
-### Configuration Storage
-
-Sunshine config stored in `data/sunshine-config.json`:
-
-```json
-{
-  "enabled": true,
-  "url": "https://localhost:47990",
-  "username": "sunshine",
-  "password": "encrypted-or-plain",
-  "moonlightWebUrl": "http://localhost:8080"
-}
-```
-
-### Troubleshooting
-
-| Issue | Solution |
-|-------|----------|
-| "Sunshine not configured" | Complete Settings page setup |
-| Connection refused | Check Sunshine is running, URL is correct |
-| SSL certificate error | Visit https://localhost:47990 first to accept cert |
-| No video in stream | Ensure moonlight-web-stream is paired with Sunshine |
-| Game doesn't launch | Check emulator path in Settings, verify ROM path |
+- `src/lib/emulator-config.ts` - Emulator path configuration
+- `src/lib/emulator-launcher.ts` - Launch emulators via command line
+- `src/app/api/config/emulators/route.ts` - Config API
+- `src/app/settings/page.tsx` - Settings UI
+- `data/emulator-config.json` - Stored paths
 
 ## User Profiles
 
@@ -440,7 +348,7 @@ export function VirtualController({ onInput }: VirtualControllerProps) { ... }
 
 ## Project Structure
 
-```
+```text
 online-emu/
 ├── server/                 # Next.js server (runs on PC)
 │   ├── src/
@@ -449,21 +357,17 @@ online-emu/
 │   │   │   │   ├── profiles/  # Profile CRUD API
 │   │   │   │   ├── saves/     # Save state API
 │   │   │   │   ├── srm/       # SRM saves API
-│   │   │   │   └── sunshine/  # Sunshine streaming API
+│   │   │   │   └── config/    # Emulator config API
 │   │   │   ├── profiles/  # Profile selection page
 │   │   │   ├── play/      # Local emulator page (iframe wrapper)
-│   │   │   ├── stream/    # Sunshine streaming page (moonlight-web)
-│   │   │   │   └── [gameId]/ # Dynamic route for game streaming
 │   │   │   └── settings/  # Configuration page
 │   │   ├── lib/           # Utilities
 │   │   │   ├── profiles.ts        # Profile storage functions
-│   │   │   ├── sunshine-service.ts # Sunshine API client
 │   │   │   └── emulator-config.ts # Emulator path config
 │   │   └── middleware.ts  # Profile check & routing
 │   ├── data/              # App data (auto-created)
 │   │   ├── profiles.json       # User profiles storage
-│   │   ├── emulator-config.json # Emulator paths
-│   │   └── sunshine-config.json # Sunshine settings
+│   │   └── emulator-config.json # Emulator paths
 │   ├── public/
 │   │   ├── emulator.html  # ⚠️ Static HTML hosting EmulatorJS (NOT React)
 │   │   ├── emulatorjs/    # Self-hosted EmulatorJS data

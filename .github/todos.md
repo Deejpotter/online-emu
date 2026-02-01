@@ -395,7 +395,7 @@ RetroArch has a web player but **NO PS2/GameCube cores** for web:
 **Logic**: Keep documentation accurate and up-to-date.
 
 - ✅ 6.1 Remove Sunshine content from README (now in ideas branch)
-- 🔲 6.2 Update copilot-instructions.md to remove Sunshine references
+- ✅ 6.2 Update copilot-instructions.md to remove Sunshine references
 - 🔲 6.3 Clean up todos.md (archive old completed phases)
 - 🔲 6.4 Add contributing guidelines if needed
 
