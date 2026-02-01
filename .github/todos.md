@@ -385,9 +385,9 @@ RetroArch has a web player but **NO PS2/GameCube cores** for web:
 
 **Logic**: Small visual improvements make the app feel more polished.
 
-- 🔲 5.1 Consistent transitions and animations
-- 🔲 5.2 Hover/focus states for all interactive elements
-- 🔲 5.3 Toast notifications for save/load feedback
+- ✅ 5.1 Consistent transitions and animations
+- ✅ 5.2 Hover/focus states for all interactive elements
+- ✅ 5.3 Toast notifications for save/load feedback
 - 🔲 5.4 System-specific color theming consistency
 
 #### Step 6: Documentation Cleanup

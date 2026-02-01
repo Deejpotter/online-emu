@@ -21,6 +21,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import type { Game, EmulatorSystem } from "@/types";
 import { isExternalSystem } from "@/types";
+import { useToast } from "@/app/components";
 
 /**
  * Message types sent TO the emulator iframe
@@ -127,6 +128,7 @@ const KEYBOARD_MAP: Record<string, string> = {
 
 export function EmulatorContent() {
 	const searchParams = useSearchParams();
+	const { showToast } = useToast();
 	const [game, setGame] = useState<Game | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
@@ -199,14 +201,16 @@ export function EmulatorContent() {
 
 				case "stateSaved":
 					console.log("[Emulator] State saved");
+					showToast("Game saved!", "success");
 					break;
 
 				case "stateLoaded":
 					console.log("[Emulator] State loaded");
+					showToast("Game loaded!", "success");
 					break;
 			}
 		},
-		[game]
+		[game, showToast]
 	);
 
 	/**
