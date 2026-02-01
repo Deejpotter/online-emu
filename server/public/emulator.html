@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EmulatorJS Player</title>
+    <style>
+        /*
+         * Responsive Emulator Scaling
+         * 
+         * Strategy: Fill the viewport while maintaining aspect ratio.
+         * - On PC: Large emulator window that fills browser
+         * - On mobile: Fills screen without overflow
+         * - EmulatorJS handles internal canvas scaling
+         */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+        }
+
+        /* EmulatorJS container - fills viewport responsively */
+        #game {
+            width: 100%;
+            height: 100%;
+            /* Ensure EmulatorJS renders on top */
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* EmulatorJS canvas styling - ensure proper scaling */
+        #game canvas {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        /* Loading indicator - shown only while EmulatorJS loads */
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #fff;
+            font-family: system-ui, -apple-system, sans-serif;
+            font-size: 18px;
+            text-align: center;
+            /* Lower z-index so EmulatorJS UI appears on top */
+            z-index: 5;
+            /* Pointer events none so clicks pass through to EmulatorJS */
+            pointer-events: none;
+        }
+
+        #loading.hidden {
+            display: none;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #333;
+            border-top-color: #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Error display */
+        #error {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #ef4444;
+            font-family: system-ui, -apple-system, sans-serif;
+            font-size: 16px;
+            text-align: center;
+            max-width: 80%;
+            display: none;
+        }
+
+        #error.visible {
+            display: block;
+        }
+
+        /* Hide loading once EmulatorJS takes over */
+        #loading.ejs-ready {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="loading">
+        <div class="spinner"></div>
+        <div id="loading-text">Loading EmulatorJS...</div>
+    </div>
+
+    <div id="error"></div>
+
+    <!-- EmulatorJS container -->
+    <div id="game"></div>
+
+    <script>
+        /**
+         * EmulatorJS Static Host Page
+         * 
+         * This page hosts EmulatorJS in isolation from React/Next.js.
+         * Communication with parent window happens via postMessage API.
+         * 
+         * URL Parameters:
+         * - gameUrl: URL to the ROM file (required)
+         * - core: EmulatorJS core name (required)
+         * - system: System name for display
+         * - biosUrl: URL to BIOS file (optional)
+         * 
+         * Incoming Messages (from parent):
+         * - { type: 'input', button: string, pressed: boolean }
+         * - { type: 'analog', stick: 'left'|'right', x: number, y: number }
+         * - { type: 'saveState' }
+         * - { type: 'loadState' }
+         * - { type: 'pause' }
+         * - { type: 'resume' }
+         * - { type: 'setVolume', volume: number }
+         * 
+         * Outgoing Messages (to parent):
+         * - { type: 'ready', width: number, height: number }
+         * - { type: 'error', message: string }
+         * - { type: 'stateChanged', state: 'playing'|'paused'|'loading' }
+         */
+
+        // Parse URL parameters
+        const params = new URLSearchParams(window.location.search);
+        const gameUrl = params.get('gameUrl');
+        const core = params.get('core');
+        const system = params.get('system') || 'Unknown System';
+        const biosUrl = params.get('biosUrl');
+        // Auto-start flag - when true, game starts without clicking "Start Game" button
+        // This works because the user's click on the game card in the library
+        // satisfies the browser's user gesture requirement for audio/video autoplay.
+        const autoStart = params.get('autoStart') === 'true';
+
+        // ========================================
+        // SERVER-SIDE SAVE SYSTEM
+        // ========================================
+        // Save files are stored on the server disk next to ROM files:
+        //   {gamesDir}/{system}/saves/{gameName}.state
+        // This is more reliable than browser IndexedDB which loses saves on refresh.
+        // ========================================
+
+        let serverSaveEnabled = true; // Use server saves by default
+        let isSaving = false; // Prevent concurrent saves
+        let isLoading = false; // Prevent concurrent loads
+
+        /**
+         * Save current game state to the server
+         * @param {number} slot - Save slot (0 = quick save)
+         * @returns {Promise<boolean>} Success
+         */
+        async function saveToServer(slot = 0) {
+            if (isSaving) {
+                console.log('[Server Save] Already saving, skipping...');
+                return false;
+            }
+
+            const ejs = window.EJS_emulator;
+            if (!ejs || !ejs.gameManager) {
+                console.warn('[Server Save] Emulator not ready');
+                return false;
+            }
+
+            isSaving = true;
+            try {
+                // Get save state as Uint8Array from EmulatorJS
+                // This is the modern API (gameManager.getState)
+                let stateData;
+                if (typeof ejs.gameManager.getState === 'function') {
+                    stateData = ejs.gameManager.getState();
+                } else {
+                    console.warn('[Server Save] getState not available');
+                    return false;
+                }
+
+                if (!stateData || stateData.length === 0) {
+                    console.warn('[Server Save] No state data returned');
+                    return false;
+                }
+
+                console.log(`[Server Save] Saving ${stateData.length} bytes to server (slot ${slot})...`);
+
+                // Send to server API
+                const response = await fetch(`/api/saves/${encodeURIComponent(gameName)}?system=${encodeURIComponent(core)}&slot=${slot}`, {
+                    method: 'POST',
+                    body: stateData,
+                    headers: {
+                        'Content-Type': 'application/octet-stream',
+                    }
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    console.log('[Server Save] ✅ Save successful:', result);
+                    // Show visual confirmation
+                    if (ejs.displayMessage) {
+                        ejs.displayMessage('STATE SAVED TO SERVER');
+                    }
+                    sendToParent({ type: 'serverSaveComplete', slot, success: true });
+                    return true;
+                } else {
+                    const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+                    console.error('[Server Save] ❌ Save failed:', error);
+                    sendToParent({ type: 'serverSaveComplete', slot, success: false, error });
+                    return false;
+                }
+            } catch (e) {
+                console.error('[Server Save] ❌ Exception during save:', e);
+                return false;
+            } finally {
+                isSaving = false;
+            }
+        }
+
+        /**
+         * Load game state from the server
+         * @param {number} slot - Save slot (0 = quick save)
+         * @returns {Promise<boolean>} Success
+         */
+        async function loadFromServer(slot = 0) {
+            if (isLoading) {
+                console.log('[Server Save] Already loading, skipping...');
+                return false;
+            }
+
+            const ejs = window.EJS_emulator;
+            if (!ejs || !ejs.gameManager) {
+                console.warn('[Server Save] Emulator not ready');
+                return false;
+            }
+
+            isLoading = true;
+            try {
+                console.log(`[Server Save] Loading from server (slot ${slot})...`);
+
+                const response = await fetch(`/api/saves/${encodeURIComponent(gameName)}?system=${encodeURIComponent(core)}&slot=${slot}`);
+
+                if (response.status === 404) {
+                    console.log('[Server Save] No save file found on server (this is normal for new games)');
+                    return false;
+                }
+
+                if (!response.ok) {
+                    const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+                    console.error('[Server Save] ❌ Load failed:', error);
+                    return false;
+                }
+
+                // Get binary data
+                const arrayBuffer = await response.arrayBuffer();
+                const stateData = new Uint8Array(arrayBuffer);
+
+                console.log(`[Server Save] Loaded ${stateData.length} bytes, applying state...`);
+
+                // Load state using the proper EmulatorJS method:
+                // 1. Write state data to virtual filesystem at /game.state
+                // 2. Call functions.loadState() to load from that path
+                // 3. Clean up the temp file after a delay
+
+                const FS = ejs.gameManager.FS;
+                if (!FS) {
+                    console.error('[Server Save] ❌ Virtual filesystem not available');
+                    return false;
+                }
+
+                try {
+                    // Remove existing temp state file if it exists
+                    try {
+                        FS.unlink('/game.state');
+                    } catch (e) {
+                        // File doesn't exist, that's fine
+                    }
+
+                    // Write the loaded state data to virtual filesystem
+                    console.log('[Server Save] Writing state to virtual filesystem at /game.state');
+                    FS.writeFile('/game.state', stateData);
+
+                    // Call the core's loadState function with the path
+                    if (ejs.gameManager.functions && ejs.gameManager.functions.loadState) {
+                        console.log('[Server Save] Calling functions.loadState("/game.state", 0)...');
+                        ejs.gameManager.functions.loadState('/game.state', 0);
+                        console.log('[Server Save] ✅ loadState called successfully');
+                    } else {
+                        console.error('[Server Save] ❌ functions.loadState not available');
+                        console.log('[Server Save] Available:', Object.keys(ejs.gameManager.functions || {}));
+                        return false;
+                    }
+
+                    // Clean up temp file after 5 seconds
+                    setTimeout(() => {
+                        try {
+                            FS.unlink('/game.state');
+                            console.log('[Server Save] Cleaned up temp state file');
+                        } catch (e) {
+                            // Ignore cleanup errors
+                        }
+                    }, 5000);
+
+                } catch (err) {
+                    console.error('[Server Save] ❌ Error loading state:', err);
+                    return false;
+                }
+
+                // Show visual confirmation
+                if (ejs.displayMessage) {
+                    ejs.displayMessage('STATE LOADED FROM SERVER');
+                }
+                console.log('[Server Save] ✅ Load successful');
+                sendToParent({ type: 'serverLoadComplete', slot, success: true });
+                return true;
+            } catch (e) {
+                console.error('[Server Save] ❌ Exception during load:', e);
+                return false;
+            } finally {
+                isLoading = false;
+            }
+        }
+
+        // Expose to window for debugging
+        window.saveToServer = saveToServer;
+        window.loadFromServer = loadFromServer;
+
+        // ========================================
+        // SRM (IN-GAME SAVES) SERVER SYSTEM
+        // ========================================
+        // SRM files store in-game save data (memory card, battery saves).
+        // These are different from save states - they persist the game's
+        // internal save system, allowing multiple save files per game.
+        //
+        // Save files are stored at: {gamesDir}/{system}/saves/{gameName}.srm
+        // ========================================
+
+        let isSavingSrm = false;
+        let isLoadingSrm = false;
+        // Removed: srmAutoSaveInterval - now using event-based saves
+
+        /**
+         * Save SRM (in-game save data) to the server
+         * @returns {Promise<boolean>} Success
+         */
+        async function saveSrmToServer() {
+            if (isSavingSrm) {
+                console.log('[Server SRM] Already saving, skipping...');
+                return false;
+            }
+
+            const ejs = window.EJS_emulator;
+            if (!ejs || !ejs.gameManager) {
+                console.warn('[Server SRM] Emulator not ready');
+                return false;
+            }
+
+            isSavingSrm = true;
+            try {
+                // First, trigger EmulatorJS to flush save data to virtual filesystem
+                if (typeof ejs.gameManager.saveSaveFiles === 'function') {
+                    ejs.gameManager.saveSaveFiles();
+                }
+
+                // Get the SRM data from the virtual filesystem
+                let srmData;
+                if (typeof ejs.gameManager.getSaveFile === 'function') {
+                    srmData = ejs.gameManager.getSaveFile(false); // false = don't trigger another save
+                }
+
+                if (!srmData || srmData.length === 0) {
+                    // No SRM data - game might not have saved yet (normal)
+                    console.log('[Server SRM] No SRM data to save (game may not have saved yet)');
+                    return false;
+                }
+
+                console.log(`[Server SRM] Saving ${srmData.length} bytes to server...`);
+
+                // Send to server API
+                const response = await fetch(`/api/srm/${encodeURIComponent(gameName)}?system=${encodeURIComponent(core)}`, {
+                    method: 'POST',
+                    body: srmData,
+                    headers: {
+                        'Content-Type': 'application/octet-stream',
+                    }
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    console.log('[Server SRM] ✅ Save successful:', result);
+                    sendToParent({ type: 'srmSaveComplete', success: true });
+                    return true;
+                } else {
+                    const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+                    console.error('[Server SRM] ❌ Save failed:', error);
+                    sendToParent({ type: 'srmSaveComplete', success: false, error });
+                    return false;
+                }
+            } catch (e) {
+                console.error('[Server SRM] ❌ Exception during save:', e);
+                return false;
+            } finally {
+                isSavingSrm = false;
+            }
+        }
+
+        /**
+         * Load SRM (in-game save data) from the server
+         * @returns {Promise<boolean>} Success
+         */
+        async function loadSrmFromServer() {
+            if (isLoadingSrm) {
+                console.log('[Server SRM] Already loading, skipping...');
+                return false;
+            }
+
+            const ejs = window.EJS_emulator;
+            if (!ejs || !ejs.gameManager) {
+                console.warn('[Server SRM] Emulator not ready');
+                return false;
+            }
+
+            isLoadingSrm = true;
+            try {
+                console.log('[Server SRM] Loading from server...');
+
+                const response = await fetch(`/api/srm/${encodeURIComponent(gameName)}?system=${encodeURIComponent(core)}`);
+
+                if (response.status === 404) {
+                    console.log('[Server SRM] No SRM file found on server (this is normal for new games)');
+                    return false;
+                }
+
+                if (!response.ok) {
+                    const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+                    console.error('[Server SRM] ❌ Load failed:', error);
+                    return false;
+                }
+
+                // Get binary data
+                const arrayBuffer = await response.arrayBuffer();
+                const srmData = new Uint8Array(arrayBuffer);
+
+                console.log(`[Server SRM] Loaded ${srmData.length} bytes, writing to filesystem...`);
+
+                // Get the path where EmulatorJS expects the SRM file
+                const srmPath = ejs.gameManager.getSaveFilePath();
+                console.log('[Server SRM] SRM path:', srmPath);
+
+                // Write to EmulatorJS virtual filesystem
+                // First ensure the directory exists
+                const pathParts = srmPath.split('/');
+                let currentPath = '';
+                for (let i = 0; i < pathParts.length - 1; i++) {
+                    if (pathParts[i] !== '') {
+                        currentPath += '/' + pathParts[i];
+                        try {
+                            if (!ejs.gameManager.FS.analyzePath(currentPath).exists) {
+                                ejs.gameManager.FS.mkdir(currentPath);
+                            }
+                        } catch (e) {
+                            // Directory might already exist
+                        }
+                    }
+                }
+
+                // Write the SRM data
+                try {
+                    // Remove existing file if present
+                    if (ejs.gameManager.FS.analyzePath(srmPath).exists) {
+                        ejs.gameManager.FS.unlink(srmPath);
+                    }
+                    ejs.gameManager.FS.writeFile(srmPath, srmData);
+                    console.log('[Server SRM] Written to virtual filesystem');
+                } catch (e) {
+                    console.error('[Server SRM] Failed to write to filesystem:', e);
+                    return false;
+                }
+
+                // Tell EmulatorJS to reload save files from filesystem
+                if (typeof ejs.gameManager.loadSaveFiles === 'function') {
+                    ejs.gameManager.loadSaveFiles();
+                    console.log('[Server SRM] Triggered loadSaveFiles()');
+                }
+
+                console.log('[Server SRM] ✅ Load successful');
+                sendToParent({ type: 'srmLoadComplete', success: true });
+                return true;
+            } catch (e) {
+                console.error('[Server SRM] ❌ Exception during load:', e);
+                return false;
+            } finally {
+                isLoadingSrm = false;
+            }
+        }
+
+        // Expose SRM functions to window for debugging
+        window.saveSrmToServer = saveSrmToServer;
+        window.loadSrmFromServer = loadSrmFromServer;
+
+        // DOM elements
+        const loadingEl = document.getElementById('loading');
+        const errorEl = document.getElementById('error');
+
+        // Send message to parent window
+        function sendToParent(message) {
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage(message, '*');
+            }
+        }
+
+        // Show error
+        function showError(message) {
+            loadingEl.classList.add('hidden');
+            errorEl.textContent = message;
+            errorEl.classList.add('visible');
+            sendToParent({ type: 'error', message });
+        }
+
+        // Validate required parameters
+        if (!gameUrl) {
+            showError('Missing required parameter: gameUrl');
+            throw new Error('gameUrl is required');
+        }
+
+        if (!core) {
+            showError('Missing required parameter: core');
+            throw new Error('core is required');
+        }
+
+        // EmulatorJS Configuration
+        // These must be set BEFORE loading the EmulatorJS script
+        window.EJS_player = '#game';
+        window.EJS_gameUrl = gameUrl;
+        window.EJS_core = core;
+        window.EJS_pathtodata = '/emulatorjs/data/';
+
+        // CRITICAL: EJS_gameName is used as the identifier for save files in IndexedDB!
+        // Without this, saves may not persist correctly between sessions.
+        // Extract game name from URL (remove path and extension)
+        // IMPORTANT: Must decode URL encoding (e.g., %20 -> space) for consistent save IDs
+        const gameFileName = gameUrl.split('/').pop().split('?')[0];
+        const decodedFileName = decodeURIComponent(gameFileName); // Decode %20, %2F, etc.
+        const gameName = decodedFileName.replace(/\.[^/.]+$/, ''); // Remove extension
+        window.EJS_gameName = gameName;
+        console.log('[EmulatorJS] Game name for saves:', gameName);
+
+        // Debug mode - DISABLED (requires unminified source files we don't have)
+        // When enabled, it tries to load GameManager.js, gamepad.js, etc. from src/
+        // We only have minified versions (emulator.min.js, emulator.min.css)
+        // window.EJS_DEBUG_XX = true;
+
+        // Language settings - disable auto-detection to prevent 404 issues
+        window.EJS_language = 'en-US';
+        window.EJS_disableAutoLang = true;
+
+        // Optional BIOS
+        if (biosUrl) {
+            window.EJS_biosUrl = biosUrl;
+        }
+
+        // Default Core Options
+        // These set the default values for the emulator settings menu.
+        // Option names discovered from Libretro core source files.
+        // System-specific options passed via URL param ?coreOptions=...
+        const coreOptionsParam = params.get('coreOptions');
+        const systemCoreOptions = coreOptionsParam ? JSON.parse(decodeURIComponent(coreOptionsParam)) : {};
+
+        // Core-specific default options based on the loaded core
+        const coreDefaults = {
+            // PSX (pcsx_rearmed) - Enable vibration for DualShock support
+            'psx': {
+                'pcsx_rearmed_vibration': 'enabled',
+                'pcsx_rearmed_analog_axis_modifier': 'square',
+                'pcsx_rearmed_memcard2': 'disabled',
+            },
+            // N64 (mupen64plus_next) - Defaults are generally good
+            'n64': {},
+            // NDS (melonDS/desmume) - Defaults
+            'nds': {},
+        };
+
+        // Get defaults for current core, or empty object
+        const currentCoreDefaults = coreDefaults[core] || {};
+
+        // Merge: base defaults < core defaults < URL params (highest priority)
+        window.EJS_defaultOptions = Object.assign({
+            // Common defaults for all systems
+            'save-state-location': 'browser',
+        }, currentCoreDefaults, systemCoreOptions);
+
+        console.log('[EmulatorJS] Core:', core, 'Options:', window.EJS_defaultOptions);
+
+        // UI Settings
+        // AUTO-START BEHAVIOR:
+        // - When autoStart=true (from URL param), EJS_startOnLoaded=true
+        //   This auto-starts the game without requiring a click on "Start Game"
+        //   Works because user clicked the game card (satisfies browser autoplay policy)
+        // - When autoStart=false, EJS_startOnLoaded=false (default)
+        //   User must click "Start Game" button manually
+        //
+        // IMPORTANT: Don't set EJS_startOnLoaded=true without user gesture,
+        // or the emulator will freeze (browser blocks audio/video autoplay).
+        // See: https://github.com/EmulatorJS/EmulatorJS/issues/289
+        window.EJS_startOnLoaded = autoStart;
+        console.log('[EmulatorJS] Auto-start:', autoStart);
+
+        window.EJS_fullscreenOnLoaded = false;  // Don't fullscreen (we handle layout)
+        // Note: Don't set EJS_defaultControls - EmulatorJS will use its built-in defaults
+        // Setting it to `true` causes a crash. It must be an object if set.
+        window.EJS_Buttons = {
+            playPause: true,   // Show play/pause button
+            restart: true,     // Show restart button
+            mute: true,        // Show mute button
+            settings: true,    // Show settings
+            fullscreen: true,  // Show fullscreen (user may want this)
+            saveState: true,   // Show save state
+            loadState: true,   // Show load state
+            screenRecord: false,
+            gamepad: false,    // Hide gamepad config (we handle input)
+            cheat: true,
+            volume: true,
+            saveSavFiles: true,   // ⭐ CRITICAL: Show "Save Files" button to manually flush saves
+            loadSavFiles: true,   // Show "Load Files" button
+            quickSave: true,
+            quickLoad: true,
+            screenshot: true,
+            cacheManager: false,
+        };
+
+        // Storage settings
+        window.EJS_CacheLimit = 1073741824;  // 1GB cache limit
+
+        // SAVE SYSTEM CONFIGURATION
+        // ==========================================
+        // EVENT-BASED SAVES (no more 30-second polling!)
+        //   - Save state: saved via EJS_onSaveState callback (user clicks save)
+        //   - SRM data: saved via EJS_onSaveUpdate callback (game writes to memory card)
+        //   - Backup: save on tab switch, window blur, page hide
+        //
+        // PRIMARY: Server-side saves (stored on disk)
+        //   - Reliable, persistent, no browser IndexedDB issues
+        //   - Profile-specific: each user has their own saves
+        //
+        // SECONDARY: Browser IndexedDB (EmulatorJS default)  
+        //   - Used as local fallback
+        // ==========================================
+
+        // Keep IndexedDB saves as fallback (for SRM/memory card data)
+        window.EJS_fixedSaveInterval = 5000;
+
+        // Debounce tracking for event-based saves
+        let saveDebounceTimer = null;
+        let srmDebounceTimer = null;
+        const SAVE_DEBOUNCE_MS = 500; // Debounce saves by 500ms
+
+        /**
+         * Debounced save to server - prevents save spam when multiple updates happen quickly
+         */
+        function debouncedSaveToServer() {
+            if (saveDebounceTimer) {
+                clearTimeout(saveDebounceTimer);
+            }
+            saveDebounceTimer = setTimeout(async () => {
+                saveDebounceTimer = null;
+                await saveToServer(0);
+            }, SAVE_DEBOUNCE_MS);
+        }
+
+        /**
+         * Debounced SRM save to server
+         */
+        function debouncedSrmSave() {
+            if (srmDebounceTimer) {
+                clearTimeout(srmDebounceTimer);
+            }
+            srmDebounceTimer = setTimeout(async () => {
+                srmDebounceTimer = null;
+                await saveSrmToServer();
+            }, SAVE_DEBOUNCE_MS);
+        }
+
+        // Helper function for browser IndexedDB flush (keeps SRM saves working)
+        function triggerSaveFlush(reason) {
+            const ejs = window.EJS_emulator;
+            if (ejs && ejs.gameManager) {
+                try {
+                    console.log('[EmulatorJS] 💾 Triggering IndexedDB flush:', reason);
+                    if (typeof ejs.gameManager.saveSaveFiles === 'function') {
+                        ejs.gameManager.saveSaveFiles();
+                        console.log('[EmulatorJS] 💾 IndexedDB flush completed');
+                    }
+                } catch (e) {
+                    console.warn('[EmulatorJS] IndexedDB flush failed:', e);
+                }
+            }
+        }
+
+        // Trigger server save on page visibility change
+        document.addEventListener('visibilitychange', async function () {
+            if (document.visibilityState === 'hidden') {
+                console.log('[Server] Tab hidden - saving state and SRM...');
+                await saveToServer(0);
+                await saveSrmToServer();
+                triggerSaveFlush('Tab hidden');
+            }
+        });
+
+        // Trigger server save on window blur
+        window.addEventListener('blur', async function () {
+            console.log('[Server] Window blur - saving state and SRM...');
+            await saveToServer(0);
+            await saveSrmToServer();
+            triggerSaveFlush('Window blur');
+        });
+
+        // Trigger server save on page hide (before unload)
+        window.addEventListener('pagehide', async function (event) {
+            console.log('[Server] Page hide - saving state and SRM...');
+            // Note: Can't await here since page is unloading
+            // But we'll try anyway - it may complete in time
+            saveToServer(0);
+            saveSrmToServer();
+            triggerSaveFlush('Page hide');
+        });
+
+        // Also handle beforeunload
+        window.addEventListener('beforeunload', function (event) {
+            // Try to save (won't wait for completion)
+            saveToServer(0);
+            saveSrmToServer();
+            triggerSaveFlush('beforeunload');
+
+            // Show warning dialog to give async save time to complete
+            event.preventDefault();
+            event.returnValue = 'Your game progress may not be saved yet. Are you sure you want to leave?';
+            return event.returnValue;
+        });
+
+        // Debug: Check IndexedDB for existing saves on page load
+        function checkIndexedDBSaves() {
+            if (!window.indexedDB) {
+                console.warn('[EmulatorJS] IndexedDB not supported');
+                return;
+            }
+
+            if (indexedDB.databases) {
+                indexedDB.databases().then(databases => {
+                    console.log('[EmulatorJS] 📂 IndexedDB databases:', databases.map(db => db.name));
+                }).catch(e => console.warn('Could not list databases:', e));
+            }
+        }
+
+        checkIndexedDBSaves();
+
+        // Save update callback - triggers SRM save to server when game saves internally
+        // This replaces the 30-second interval with event-based saves
+        window.EJS_onSaveUpdate = function (saveData) {
+            console.log('[EmulatorJS] 💾 Save data updated - triggering server save:', {
+                hash: saveData.hash,
+                format: saveData.format
+            });
+            sendToParent({
+                type: 'saveUpdated',
+                hash: saveData.hash
+            });
+
+            // Trigger debounced SRM save to server
+            debouncedSrmSave();
+        };
+
+        // Ready callback - fires when EmulatorJS UI is ready (before game starts)
+        // At this point, user needs to click "Start Game" button
+        window.EJS_ready = function () {
+            console.log('[EmulatorJS] Emulator UI ready - user must click Start Game');
+            // Hide our loading spinner - EmulatorJS will show its own "Start Game" button
+            loadingEl.classList.add('ejs-ready');
+            sendToParent({ type: 'stateChanged', state: 'ready' });
+        };
+
+        // Callbacks
+        window.EJS_onGameStart = async function () {
+            console.log('[EmulatorJS] Game started');
+            loadingEl.classList.add('hidden');
+
+            // Try to get canvas dimensions
+            const canvas = document.querySelector('#game canvas');
+            const width = canvas ? canvas.width : 256;
+            const height = canvas ? canvas.height : 224;
+
+            sendToParent({
+                type: 'ready',
+                width,
+                height
+            });
+            sendToParent({ type: 'stateChanged', state: 'playing' });
+
+            // NOTE: No auto-save intervals anymore!
+            // Saves happen via EJS_onSaveUpdate (when game saves) and EJS_onSaveState (manual save)
+            // Plus backup saves on visibility change / tab close
+
+            // Load SRM (in-game saves) from server
+            // This must happen AFTER the game starts so the emulator has initialized
+            // But BEFORE the user plays, so they see their saved progress
+            setTimeout(async () => {
+                console.log('[Server SRM] Loading in-game saves from server...');
+                const loaded = await loadSrmFromServer();
+                if (loaded) {
+                    console.log('[Server SRM] ✅ Restored in-game saves from server');
+                } else {
+                    console.log('[Server SRM] No previous in-game saves found (this is normal for new games)');
+                }
+            }, 100);
+
+            // NOTE: We do NOT auto-load save states anymore.
+            // Save states are for manual "quick save/load" via the UI buttons.
+            // In-game saves (SRM) are what persist automatically.
+        };
+
+        // EmulatorJS save/load callbacks
+        // Hook into EmulatorJS's built-in save system to also save to server
+        window.EJS_onSaveState = function (saveData) {
+            console.log('[EmulatorJS] State saved via EmulatorJS UI', saveData);
+            sendToParent({ type: 'stateSaved' });
+
+            // Also save to server automatically (uses debounce)
+            debouncedSaveToServer();
+        };
+
+        window.EJS_onLoadState = function () {
+            console.log('[EmulatorJS] State loaded via EmulatorJS UI');
+            sendToParent({ type: 'stateLoaded' });
+        };
+
+        // Button mapping: EmulatorJS button IDs
+        // These vary by system, but common ones:
+        const BUTTON_MAP = {
+            // Standard gamepad
+            'a': 0,
+            'b': 1,
+            'x': 2,
+            'y': 3,
+            'l': 4,
+            'r': 5,
+            'select': 8,
+            'start': 9,
+            'up': 12,
+            'down': 13,
+            'left': 14,
+            'right': 15,
+            // N64 specific
+            'z': 6,
+            'l2': 6,  // Z trigger as L2
+            'r2': 7,  // Alias for R
+            // Analog stick clicks
+            'l3': 10,
+            'r3': 11,
+        };
+
+        // Handle incoming messages from parent
+        window.addEventListener('message', function (event) {
+            const data = event.data;
+            if (!data || !data.type) return;
+
+            console.log('[EmulatorJS] Received message:', data.type, data);
+
+            // Get the emulator instance
+            const ejs = window.EJS_emulator;
+
+            switch (data.type) {
+                case 'input':
+                    handleInput(data.button, data.pressed);
+                    break;
+
+                case 'analog':
+                    handleAnalog(data.stick, data.x, data.y);
+                    break;
+
+                case 'saveState':
+                    console.log('[EmulatorJS] Save state requested');
+                    if (!ejs || !ejs.gameManager) {
+                        console.warn('[EmulatorJS] Emulator not ready for save');
+                        break;
+                    }
+                    // Save to server using the proper getState() method
+                    saveToServer(0).then(success => {
+                        console.log('[EmulatorJS] Server save result:', success);
+                        if (success) {
+                            sendToParent({ type: 'stateSaved' });
+                        }
+                    });
+                    break;
+
+                case 'loadState':
+                    console.log('[EmulatorJS] Load state requested');
+                    if (!ejs || !ejs.gameManager) {
+                        console.warn('[EmulatorJS] Emulator not ready for load');
+                        break;
+                    }
+                    // Load from server using the proper loadState() method
+                    loadFromServer(0).then(success => {
+                        console.log('[EmulatorJS] Server load result:', success);
+                        if (success) {
+                            sendToParent({ type: 'stateLoaded' });
+                        }
+                    });
+                    break;
+
+                case 'pause':
+                    if (ejs && ejs.gameManager) {
+                        ejs.gameManager.togglePause();
+                        sendToParent({ type: 'stateChanged', state: 'paused' });
+                    }
+                    break;
+
+                case 'resume':
+                    if (ejs && ejs.gameManager) {
+                        ejs.gameManager.togglePause();
+                        sendToParent({ type: 'stateChanged', state: 'playing' });
+                    }
+                    break;
+
+                case 'setVolume':
+                    if (ejs && ejs.gameManager) {
+                        ejs.gameManager.setVolume(data.volume);
+                    }
+                    break;
+
+                case 'getCanvas':
+                    // Return canvas info for capture
+                    const canvas = document.querySelector('#game canvas');
+                    if (canvas) {
+                        sendToParent({
+                            type: 'canvasInfo',
+                            width: canvas.width,
+                            height: canvas.height
+                        });
+                    }
+                    break;
+            }
+        });
+
+        // Handle button input
+        function handleInput(button, pressed) {
+            const ejs = window.EJS_emulator;
+            if (!ejs || !ejs.gameManager) return;
+
+            const buttonId = BUTTON_MAP[button.toLowerCase()];
+            if (buttonId === undefined) {
+                console.warn('[EmulatorJS] Unknown button:', button);
+                return;
+            }
+
+            // Simulate gamepad button
+            try {
+                if (pressed) {
+                    ejs.gameManager.simulateInput(0, buttonId, 1);
+                } else {
+                    ejs.gameManager.simulateInput(0, buttonId, 0);
+                }
+            } catch (e) {
+                console.warn('[EmulatorJS] Input simulation failed:', e);
+            }
+        }
+
+        // Handle analog stick input
+        function handleAnalog(stick, x, y) {
+            const ejs = window.EJS_emulator;
+            if (!ejs || !ejs.gameManager) return;
+
+            try {
+                // EmulatorJS uses axes 0,1 for left stick, 2,3 for right stick
+                const xAxis = stick === 'left' ? 0 : 2;
+                const yAxis = stick === 'left' ? 1 : 3;
+
+                // Values should be -1 to 1, convert to EmulatorJS range
+                ejs.gameManager.simulateInput(0, xAxis, x, true);
+                ejs.gameManager.simulateInput(0, yAxis, y, true);
+            } catch (e) {
+                console.warn('[EmulatorJS] Analog input simulation failed:', e);
+            }
+        }
+
+        // Notify parent that we're loading
+        sendToParent({ type: 'stateChanged', state: 'loading' });
+
+        // Add error handler for EmulatorJS load failures
+        window.EJS_onLoadError = function (error) {
+            console.error('[EmulatorJS] Load error:', error);
+            showError('Failed to load ROM: ' + (error.message || error || 'Unknown error'));
+        };
+
+        // Add a timeout to detect if emulator gets stuck
+        const loadTimeout = setTimeout(function () {
+            console.warn('[EmulatorJS] Load timeout - emulator may be stuck');
+            // Don't show error yet, some ROMs take time to load
+        }, 30000);
+
+        // Clear timeout when game starts
+        const originalOnGameStart = window.EJS_onGameStart;
+        window.EJS_onGameStart = function () {
+            clearTimeout(loadTimeout);
+            if (originalOnGameStart) originalOnGameStart();
+        };
+
+        // Load EmulatorJS script
+        const script = document.createElement('script');
+        script.src = '/emulatorjs/data/loader.js';
+        script.async = true;
+        script.onerror = function () {
+            showError('Failed to load EmulatorJS. Make sure to run: npm run setup');
+        };
+        script.onload = function () {
+            console.log('[EmulatorJS] loader.js loaded successfully');
+            // Auto-hide our loading indicator after a short delay
+            // to let EmulatorJS render its own UI
+            setTimeout(function () {
+                if (!loadingEl.classList.contains('hidden')) {
+                    console.log('[EmulatorJS] Auto-hiding loading indicator');
+                    loadingEl.classList.add('hidden');
+                }
+            }, 2000);
+        };
+        document.body.appendChild(script);
+
+        console.log('[EmulatorJS] Initializing with:', {
+            gameUrl,
+            core,
+            system,
+            biosUrl: biosUrl || 'none'
+        });
+
+        // Pre-flight check: verify ROM URL is accessible
+        fetch(gameUrl, { method: 'HEAD' })
+            .then(function (response) {
+                if (!response.ok) {
+                    console.error('[EmulatorJS] ROM URL check failed:', response.status, response.statusText);
+                    if (response.status === 404) {
+                        showError('ROM file not found. Check if the file exists.');
+                    }
+                } else {
+                    console.log('[EmulatorJS] ROM URL is accessible');
+                }
+            })
+            .catch(function (error) {
+                console.error('[EmulatorJS] ROM URL check error:', error);
+            });
+    </script>
+</body>
+
+</html>
