@@ -535,15 +535,15 @@ export function EmulatorContent() {
 							<>
 								<button
 									onClick={() => sendToEmulator({ type: "saveState" })}
-									className="px-2 py-1 text-xs md:text-sm bg-zinc-800 hover:bg-zinc-700 rounded transition-colors"
+									className="px-3 py-2 text-xs md:text-sm bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors min-h-[44px]"
 								>
-									Save
+									💾 Save
 								</button>
 								<button
 									onClick={() => sendToEmulator({ type: "loadState" })}
-									className="px-2 py-1 text-xs md:text-sm bg-zinc-800 hover:bg-zinc-700 rounded transition-colors"
+									className="px-3 py-2 text-xs md:text-sm bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors min-h-[44px]"
 								>
-									Load
+									📂 Load
 								</button>
 							</>
 						)}
@@ -551,7 +551,7 @@ export function EmulatorContent() {
 						{/* Fullscreen button - always visible, prominent on mobile */}
 						<button
 							onClick={toggleFullscreen}
-							className="px-2 py-1 text-xs md:text-sm bg-blue-600 hover:bg-blue-500 rounded transition-colors font-medium"
+							className="px-3 py-2 text-xs md:text-sm bg-blue-600 hover:bg-blue-500 rounded-lg transition-colors font-medium min-h-[44px]"
 							title="Toggle fullscreen"
 						>
 							⛶ Full
@@ -560,7 +560,7 @@ export function EmulatorContent() {
 						{/* Toggle header visibility on mobile */}
 						<button
 							onClick={() => setShowControls(!showControls)}
-							className="md:hidden px-2 py-1 text-xs bg-zinc-800 hover:bg-zinc-700 rounded transition-colors"
+							className="md:hidden px-3 py-2 text-xs bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors min-h-[44px]"
 							title={showControls ? "Hide controls" : "Show controls"}
 						>
 							{showControls ? "▲" : "▼"}

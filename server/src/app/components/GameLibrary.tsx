@@ -168,10 +168,43 @@ export function GameLibrary({ onSelectGame }: GameLibraryProps) {
 
 	if (loading) {
 		return (
-			<div className="flex items-center justify-center py-20">
-				<div className="text-center">
-					<div className="text-4xl mb-4 animate-pulse">🎮</div>
-					<p className="text-zinc-400">Loading games...</p>
+			<div className="space-y-6">
+				{/* Header skeleton */}
+				<div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+					<div>
+						<div className="h-8 w-40 bg-zinc-800 rounded animate-pulse" />
+						<div className="h-4 w-24 bg-zinc-800 rounded mt-2 animate-pulse" />
+					</div>
+					<div className="flex gap-3">
+						<div className="h-10 w-48 bg-zinc-800 rounded-lg animate-pulse" />
+						<div className="h-10 w-32 bg-zinc-800 rounded-lg animate-pulse" />
+					</div>
+				</div>
+
+				{/* System filter skeleton */}
+				<div className="flex gap-2">
+					{[1, 2, 3, 4, 5].map((i) => (
+						<div
+							key={i}
+							className="h-8 w-20 bg-zinc-800 rounded-full animate-pulse"
+						/>
+					))}
+				</div>
+
+				{/* Game cards skeleton */}
+				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+					{[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+						<div
+							key={i}
+							className="bg-zinc-800/50 rounded-xl overflow-hidden border border-zinc-700/50"
+						>
+							<div className="aspect-4/3 bg-zinc-700 animate-pulse" />
+							<div className="p-4 space-y-2">
+								<div className="h-5 bg-zinc-700 rounded animate-pulse w-3/4" />
+								<div className="h-4 bg-zinc-700/50 rounded animate-pulse w-1/2" />
+							</div>
+						</div>
+					))}
 				</div>
 			</div>
 		);
@@ -263,9 +296,22 @@ export function GameLibrary({ onSelectGame }: GameLibraryProps) {
 
 			{/* Error State */}
 			{error && (
-				<div className="p-4 rounded-lg bg-red-900/50 border border-red-700 text-red-200">
-					<p className="font-medium">Error loading games</p>
-					<p className="text-sm opacity-80">{error}</p>
+				<div className="p-6 rounded-lg bg-red-900/30 border border-red-700/50 text-center">
+					<div className="text-4xl mb-3">⚠️</div>
+					<p className="font-medium text-red-200 mb-1">Error loading games</p>
+					<p className="text-sm text-red-300/80 mb-4">{error}</p>
+					<button
+						onClick={fetchGames}
+						disabled={loading}
+						className="
+							px-4 py-2 rounded-lg
+							bg-red-600 hover:bg-red-500 disabled:bg-red-800 disabled:opacity-50
+							text-white font-medium text-sm
+							transition-colors
+						"
+					>
+						{loading ? "⏳ Retrying..." : "🔄 Try Again"}
+					</button>
 				</div>
 			)}
 

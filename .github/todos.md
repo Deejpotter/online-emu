@@ -358,8 +358,8 @@ RetroArch has a web player but **NO PS2/GameCube cores** for web:
 
 **Logic**: Users should always have a path forward when something fails.
 
-- 🔲 2.1 Add retry button to game library fetch failures
-- 🔲 2.2 Add retry button to profile fetch failures
+- ✅ 2.1 Add retry button to game library fetch failures
+- ✅ 2.2 Add retry button to profile fetch failures
 - 🔲 2.3 Better error messages with actionable suggestions
 - 🔲 2.4 Graceful degradation when features unavailable
 
@@ -367,17 +367,17 @@ RetroArch has a web player but **NO PS2/GameCube cores** for web:
 
 **Logic**: Users need visual feedback during async operations.
 
-- 🔲 3.1 Add skeleton loaders for game library
+- ✅ 3.1 Add skeleton loaders for game library
 - 🔲 3.2 Add loading indicator for profile switching
 - 🔲 3.3 Add progress feedback for game loading
-- 🔲 3.4 Disable buttons during operations to prevent double-clicks
+- ✅ 3.4 Disable buttons during operations to prevent double-clicks
 
 #### Step 4: Mobile UX Improvements
 
 **Logic**: Many users will play on mobile devices.
 
-- 🔲 4.1 Larger touch targets for buttons (min 44px)
-- 🔲 4.2 Better spacing between interactive elements
+- ✅ 4.1 Larger touch targets for buttons (min 44px)
+- ✅ 4.2 Better spacing between interactive elements
 - 🔲 4.3 Swipe gestures for navigation (optional)
 - 🔲 4.4 Optimize game library grid for small screens
 

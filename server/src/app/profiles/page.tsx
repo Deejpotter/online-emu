@@ -160,8 +160,18 @@ export default function ProfilesPage() {
 
 			{/* Error Message */}
 			{error && (
-				<div className="mb-6 px-4 py-2 bg-red-500/20 border border-red-500/50 rounded-lg text-red-400 text-sm">
-					{error}
+				<div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg text-center">
+					<p className="text-red-400 mb-3">{error}</p>
+					<button
+						onClick={() => {
+							setError(null);
+							setLoading(true);
+							fetchProfiles();
+						}}
+						className="px-4 py-2 bg-red-600 hover:bg-red-500 rounded-lg text-white text-sm font-medium transition-colors"
+					>
+						🔄 Try Again
+					</button>
 				</div>
 			)}
 
@@ -178,10 +188,10 @@ export default function ProfilesPage() {
 								{profile.name}
 							</span>
 						</button>
-						{/* Delete button (shown on hover) */}
+						{/* Delete button (shown on hover/touch) */}
 						<button
 							onClick={() => setDeleteId(profile.id)}
-							className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 rounded-full text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+							className="absolute -top-2 -right-2 w-8 h-8 bg-red-500 hover:bg-red-600 active:bg-red-700 rounded-full text-white text-sm opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity flex items-center justify-center"
 							title="Delete profile"
 						>
 							✕
