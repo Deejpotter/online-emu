@@ -264,7 +264,8 @@ export function GameLibrary({ onSelectGame }: GameLibraryProps) {
 					<button
 						onClick={() => setSelectedSystem("all")}
 						className={`
-              px-3 py-1.5 rounded-full text-sm font-medium transition-colors
+              px-3 py-1.5 rounded-full text-sm font-medium transition-all
+              focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-zinc-950
               ${
 								selectedSystem === "all"
 									? "bg-blue-600 text-white"
@@ -280,7 +281,8 @@ export function GameLibrary({ onSelectGame }: GameLibraryProps) {
 							key={system.id}
 							onClick={() => setSelectedSystem(system.id)}
 							className={`
-                px-3 py-1.5 rounded-full text-sm font-medium transition-colors
+                px-3 py-1.5 rounded-full text-sm font-medium transition-all
+                focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-zinc-950
                 ${
 									selectedSystem === system.id
 										? "bg-blue-600 text-white"

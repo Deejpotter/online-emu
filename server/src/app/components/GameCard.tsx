@@ -110,11 +110,11 @@ export function GameCard({ game, onSelect }: GameCardProps) {
         focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-zinc-950
       `}
 		>
-			{/* Sunshine Streaming Badge */}
+			{/* External Emulator Badge (PS2/GameCube - launches on PC) */}
 			{isExternal && (
 				<div className="absolute top-2 right-2 z-10 px-2 py-1 bg-violet-500/90 text-white text-xs font-medium rounded-full shadow-lg flex items-center gap-1">
-					<span>📡</span>
-					<span>Stream</span>
+					<span>🖥️</span>
+					<span>PC</span>
 				</div>
 			)}
 

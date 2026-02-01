@@ -181,7 +181,7 @@ export default function ProfilesPage() {
 					<div key={profile.id} className="relative group">
 						<button
 							onClick={() => selectProfile(profile)}
-							className="flex flex-col items-center p-6 rounded-xl bg-zinc-800/50 hover:bg-zinc-700/50 border border-zinc-700 hover:border-zinc-600 transition-all duration-200 w-32"
+							className="flex flex-col items-center p-6 rounded-xl bg-zinc-800/50 hover:bg-zinc-700/50 border border-zinc-700 hover:border-zinc-600 transition-all duration-200 w-32 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-zinc-950"
 						>
 							<span className="text-5xl mb-3">{profile.avatar || "👤"}</span>
 							<span className="text-sm font-medium truncate w-full text-center">
@@ -191,7 +191,7 @@ export default function ProfilesPage() {
 						{/* Delete button (shown on hover/touch) */}
 						<button
 							onClick={() => setDeleteId(profile.id)}
-							className="absolute -top-2 -right-2 w-8 h-8 bg-red-500 hover:bg-red-600 active:bg-red-700 rounded-full text-white text-sm opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity flex items-center justify-center"
+							className="absolute -top-2 -right-2 w-8 h-8 bg-red-500 hover:bg-red-600 active:bg-red-700 rounded-full text-white text-sm opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-red-400 focus:opacity-100"
 							title="Delete profile"
 						>
 							✕
@@ -202,7 +202,7 @@ export default function ProfilesPage() {
 				{/* Add New Profile Button */}
 				<button
 					onClick={() => setShowCreate(true)}
-					className="flex flex-col items-center justify-center p-6 rounded-xl border-2 border-dashed border-zinc-700 hover:border-zinc-500 text-zinc-500 hover:text-zinc-300 transition-all duration-200 w-32 h-35"
+					className="flex flex-col items-center justify-center p-6 rounded-xl border-2 border-dashed border-zinc-700 hover:border-zinc-500 text-zinc-500 hover:text-zinc-300 transition-all duration-200 w-32 h-35 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-zinc-950"
 				>
 					<span className="text-4xl mb-2">➕</span>
 					<span className="text-sm">Add Profile</span>
