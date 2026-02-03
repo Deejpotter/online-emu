@@ -1,26 +1,26 @@
 /**
  * Server Status API Route
- * 
+ *
  * GET /api/status - Get basic server status
  */
 
-import { NextResponse } from 'next/server';
-import { getSupportedSystems } from '@/lib/game-library';
-import type { ApiResponse } from '@/types';
-import os from 'os';
+import { NextResponse } from "next/server";
+import { getSupportedSystems } from "@/lib/game-library";
+import type { ApiResponse } from "@/types";
+import os from "os";
 
 interface ServerStatus {
-  online: boolean;
-  version: string;
-  uptime: number;
-  network: {
-    primaryIp: string | null;
-    allIps: string[];
-    port: number;
-  };
-  emulation: {
-    supportedSystems: string[];
-  };
+	online: boolean;
+	version: string;
+	uptime: number;
+	network: {
+		primaryIp: string | null;
+		allIps: string[];
+		port: number;
+	};
+	emulation: {
+		supportedSystems: string[];
+	};
 }
 
 // Track server start time
@@ -65,38 +65,40 @@ function getAllLocalIps(): string[] {
 
 /**
  * GET /api/status
- * 
+ *
  * Returns current server status.
  */
 export async function GET() {
-  try {
-    const status: ServerStatus = {
-      online: true,
-      version: '1.0.0',
-      uptime: Math.floor((Date.now() - serverStartTime) / 1000), // seconds
-      network: {
-        primaryIp: getPrimaryLocalIp(),
-        allIps: getAllLocalIps(),
-        port: parseInt(process.env.PORT || '3000', 10),
-      },
-      emulation: {
-        supportedSystems: getSupportedSystems(),
-      },
-    };
+	try {
+		const status: ServerStatus = {
+			online: true,
+			version: "1.0.0",
+			uptime: Math.floor((Date.now() - serverStartTime) / 1000), // seconds
+			network: {
+				primaryIp: getPrimaryLocalIp(),
+				allIps: getAllLocalIps(),
+				port: parseInt(process.env.PORT || "3000", 10),
+			},
+			emulation: {
+				supportedSystems: getSupportedSystems(),
+			},
+		};
 
-    const response: ApiResponse<ServerStatus> = {
-      success: true,
-      data: status,
-    };
+		const response: ApiResponse<ServerStatus> = {
+			success: true,
+			data: status,
+		};
 
-    return NextResponse.json(response);
+		return NextResponse.json(response);
+	} catch (error) {
+		console.error("[API] Error getting status:", error);
 
-  } catch (error) {
-    console.error('[API] Error getting status:', error);
-    
-    return NextResponse.json({
-      success: false,
-      error: 'Failed to get server status',
-    }, { status: 500 });
-  }
+		return NextResponse.json(
+			{
+				success: false,
+				error: "Failed to get server status",
+			},
+			{ status: 500 }
+		);
+	}
 }

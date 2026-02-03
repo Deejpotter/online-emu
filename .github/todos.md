@@ -432,6 +432,7 @@ RetroArch has a web player but **NO PS2/GameCube cores** for web:
 **Logic**: The build is failing due to code issues that need to be fixed before we can deploy.
 
 **Sub-steps**:
+
 - ✅ 1.1 Fix syntax error in `api/status/route.ts` (extra closing brace)
 - ✅ 1.2 Fix `useSearchParams()` Suspense boundary issue in `/profiles` page
   - Next.js 13+ requires `useSearchParams()` to be wrapped in `<Suspense>`
@@ -443,6 +444,7 @@ RetroArch has a web player but **NO PS2/GameCube cores** for web:
 **Logic**: PM2 manages Node.js processes - auto-restart on crash, logging, and startup scripts.
 
 **Sub-steps**:
+
 - ✅ 2.1 Install PM2 globally (`npm install -g pm2`)
 - ✅ 2.2 Create `ecosystem.config.js` with correct Next.js path
   - Windows requires using `node_modules/next/dist/bin/next` directly
@@ -456,6 +458,7 @@ RetroArch has a web player but **NO PS2/GameCube cores** for web:
 **Logic**: PM2 can generate startup scripts so the app runs automatically on boot.
 
 **Sub-steps**:
+
 - ✅ 3.1 Install `pm2-windows-startup` (standard pm2 startup doesn't work on Windows)
 - ✅ 3.2 Run `pm2-startup install` to add registry entry
 - ✅ 3.3 Save current process list (`pm2 save`)
@@ -466,6 +469,7 @@ RetroArch has a web player but **NO PS2/GameCube cores** for web:
 **Logic**: Ensure the app is accessible from other devices on the LAN.
 
 **Sub-steps**:
+
 - ✅ 4.1 Verify app responds at `http://10.0.0.13:3000` (confirmed in logs)
 - ✅ 4.2 Fix `primaryIp` TypeError - API was missing `network` object
   - Updated `api/status/route.ts` to return `network` object with IP info
@@ -476,6 +480,7 @@ RetroArch has a web player but **NO PS2/GameCube cores** for web:
 ### Note on Cross-Origin-Opener-Policy Warning
 
 When accessing the app via LAN IP (e.g., `10.0.0.13`) instead of `localhost`:
+
 - The COOP/COEP headers are ignored by browsers for security reasons
 - This only affects `SharedArrayBuffer` which is needed for **threaded WASM cores**
 - **Workaround**: Most EmulatorJS cores work without threads

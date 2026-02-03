@@ -84,7 +84,7 @@ export function GameLibrary({ onSelectGame }: GameLibraryProps) {
 	const [scanning, setScanning] = useState(false);
 	const [viewMode, setViewMode] = useState<ViewMode>("grid");
 	const [sortMode, setSortMode] = useState<SortMode>("alpha");
-	
+
 	// Refs for alphabet jump navigation
 	const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
@@ -191,7 +191,8 @@ export function GameLibrary({ onSelectGame }: GameLibraryProps) {
 					// If both have lastPlayed, sort by most recent
 					if (a.lastPlayed && b.lastPlayed) {
 						return (
-							new Date(b.lastPlayed).getTime() - new Date(a.lastPlayed).getTime()
+							new Date(b.lastPlayed).getTime() -
+							new Date(a.lastPlayed).getTime()
 						);
 					}
 					// Games with lastPlayed come first
@@ -199,13 +200,13 @@ export function GameLibrary({ onSelectGame }: GameLibraryProps) {
 					if (b.lastPlayed) return 1;
 					// Otherwise alphabetical
 					return a.title.localeCompare(b.title);
-				
+
 				case "system":
 					// Group by system, then alphabetical within system
 					const systemCompare = a.system.localeCompare(b.system);
 					if (systemCompare !== 0) return systemCompare;
 					return a.title.localeCompare(b.title);
-				
+
 				case "alpha":
 				default:
 					return a.title.localeCompare(b.title);
@@ -216,17 +217,17 @@ export function GameLibrary({ onSelectGame }: GameLibraryProps) {
 	// Group games by first letter for alphabet navigation
 	const gamesByLetter = useMemo(() => {
 		const groups: Record<string, Game[]> = {};
-		
+
 		for (const game of sortedGames) {
 			const firstChar = game.title.charAt(0).toUpperCase();
 			const letter = /[A-Z]/.test(firstChar) ? firstChar : "#";
-			
+
 			if (!groups[letter]) {
 				groups[letter] = [];
 			}
 			groups[letter].push(game);
 		}
-		
+
 		return groups;
 	}, [sortedGames]);
 
@@ -314,7 +315,7 @@ export function GameLibrary({ onSelectGame }: GameLibraryProps) {
 							{selectedSystem !== "all" && ` • ${filteredGames.length} shown`}
 						</p>
 					</div>
-					
+
 					{/* View Mode Toggle */}
 					<div className="flex items-center gap-2">
 						<div className="flex bg-zinc-800 rounded-lg p-1">
@@ -327,7 +328,11 @@ export function GameLibrary({ onSelectGame }: GameLibraryProps) {
 								}`}
 								title="Grid view"
 							>
-								<svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+								<svg
+									className="w-4 h-4"
+									fill="currentColor"
+									viewBox="0 0 20 20"
+								>
 									<path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
 								</svg>
 							</button>
@@ -340,8 +345,16 @@ export function GameLibrary({ onSelectGame }: GameLibraryProps) {
 								}`}
 								title="List view"
 							>
-								<svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-									<path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+								<svg
+									className="w-4 h-4"
+									fill="currentColor"
+									viewBox="0 0 20 20"
+								>
+									<path
+										fillRule="evenodd"
+										d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
+										clipRule="evenodd"
+									/>
 								</svg>
 							</button>
 						</div>
@@ -542,30 +555,45 @@ export function GameLibrary({ onSelectGame }: GameLibraryProps) {
 								{sortMode === "alpha" && !searchQuery ? (
 									// Grouped by letter
 									<div className="space-y-6">
-										{ALPHABET.filter((letter) => gamesByLetter[letter]).map((letter) => (
-											<div
-												key={letter}
-												ref={(el) => { sectionRefs.current[letter] = el; }}
-											>
-												<div className="sticky top-0 z-10 bg-zinc-950/95 backdrop-blur py-2 mb-3 border-b border-zinc-800">
-													<span className="text-lg font-bold text-zinc-400">{letter}</span>
-													<span className="text-xs text-zinc-600 ml-2">
-														{gamesByLetter[letter].length} game{gamesByLetter[letter].length !== 1 ? "s" : ""}
-													</span>
+										{ALPHABET.filter((letter) => gamesByLetter[letter]).map(
+											(letter) => (
+												<div
+													key={letter}
+													ref={(el) => {
+														sectionRefs.current[letter] = el;
+													}}
+												>
+													<div className="sticky top-0 z-10 bg-zinc-950/95 backdrop-blur py-2 mb-3 border-b border-zinc-800">
+														<span className="text-lg font-bold text-zinc-400">
+															{letter}
+														</span>
+														<span className="text-xs text-zinc-600 ml-2">
+															{gamesByLetter[letter].length} game
+															{gamesByLetter[letter].length !== 1 ? "s" : ""}
+														</span>
+													</div>
+													<div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+														{gamesByLetter[letter].map((game) => (
+															<GameCard
+																key={game.id}
+																game={game}
+																onSelect={onSelectGame}
+															/>
+														))}
+													</div>
 												</div>
-												<div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
-													{gamesByLetter[letter].map((game) => (
-														<GameCard key={game.id} game={game} onSelect={onSelectGame} />
-													))}
-												</div>
-											</div>
-										))}
+											)
+										)}
 									</div>
 								) : (
 									// Flat grid (search results or other sort modes)
 									<div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
 										{sortedGames.map((game) => (
-											<GameCard key={game.id} game={game} onSelect={onSelectGame} />
+											<GameCard
+												key={game.id}
+												game={game}
+												onSelect={onSelectGame}
+											/>
 										))}
 									</div>
 								)}
@@ -578,62 +606,82 @@ export function GameLibrary({ onSelectGame }: GameLibraryProps) {
 								{sortMode === "alpha" && !searchQuery ? (
 									// Grouped by letter
 									<div className="space-y-4">
-										{ALPHABET.filter((letter) => gamesByLetter[letter]).map((letter) => (
-											<div
-												key={letter}
-												ref={(el) => { sectionRefs.current[letter] = el; }}
-											>
-												<div className="sticky top-0 z-10 bg-zinc-950/95 backdrop-blur py-2 mb-2 border-b border-zinc-800">
-													<span className="text-lg font-bold text-zinc-400">{letter}</span>
-													<span className="text-xs text-zinc-600 ml-2">
-														{gamesByLetter[letter].length} game{gamesByLetter[letter].length !== 1 ? "s" : ""}
-													</span>
-												</div>
-												<div className="space-y-1">
-													{gamesByLetter[letter].map((game) => (
-														<button
-															key={game.id}
-															onClick={() => onSelectGame(game)}
-															className="
+										{ALPHABET.filter((letter) => gamesByLetter[letter]).map(
+											(letter) => (
+												<div
+													key={letter}
+													ref={(el) => {
+														sectionRefs.current[letter] = el;
+													}}
+												>
+													<div className="sticky top-0 z-10 bg-zinc-950/95 backdrop-blur py-2 mb-2 border-b border-zinc-800">
+														<span className="text-lg font-bold text-zinc-400">
+															{letter}
+														</span>
+														<span className="text-xs text-zinc-600 ml-2">
+															{gamesByLetter[letter].length} game
+															{gamesByLetter[letter].length !== 1 ? "s" : ""}
+														</span>
+													</div>
+													<div className="space-y-1">
+														{gamesByLetter[letter].map((game) => (
+															<button
+																key={game.id}
+																onClick={() => onSelectGame(game)}
+																className="
 																w-full flex items-center gap-3 p-3 rounded-lg
 																bg-zinc-800/50 hover:bg-zinc-700/50 border border-zinc-700/50
 																transition-colors text-left
 															"
-														>
-															{/* Mini thumbnail or icon */}
-															<div className="w-12 h-12 flex-shrink-0 rounded bg-zinc-900 flex items-center justify-center overflow-hidden">
-																{game.coverArt ? (
-																	<img src={game.coverArt} alt="" className="w-full h-full object-cover" />
-																) : (
-																	<span className="text-xl opacity-50">🎮</span>
-																)}
-															</div>
-															
-															{/* Game info */}
-															<div className="flex-1 min-w-0">
-															<div className="font-semibold text-base text-white truncate">{game.title}</div>
-																<div className="flex items-center gap-2 mt-0.5">
-																	<span className={`text-xs px-1.5 py-0.5 rounded ${SYSTEM_BADGE_COLORS[game.system] || "bg-zinc-700"}`}>
-																		{SYSTEM_NAMES[game.system] || game.system}
-																	</span>
-																	{game.lastPlayed && (
-																		<span className="text-xs text-zinc-500">
-																			{formatRelativeTime(game.lastPlayed)}
+															>
+																{/* Mini thumbnail or icon */}
+																<div className="w-12 h-12 flex-shrink-0 rounded bg-zinc-900 flex items-center justify-center overflow-hidden">
+																	{game.coverArt ? (
+																		<img
+																			src={game.coverArt}
+																			alt=""
+																			className="w-full h-full object-cover"
+																		/>
+																	) : (
+																		<span className="text-xl opacity-50">
+																			🎮
 																		</span>
 																	)}
-																	{isExternalSystem(game.system) && (
-																		<span className="text-xs">🖥️</span>
-																	)}
 																</div>
-															</div>
 
-															{/* Play indicator */}
-															<div className="text-zinc-500 text-xl">▶</div>
-														</button>
-													))}
+																{/* Game info */}
+																<div className="flex-1 min-w-0">
+																	<div className="font-semibold text-base text-white truncate">
+																		{game.title}
+																	</div>
+																	<div className="flex items-center gap-2 mt-0.5">
+																		<span
+																			className={`text-xs px-1.5 py-0.5 rounded ${
+																				SYSTEM_BADGE_COLORS[game.system] ||
+																				"bg-zinc-700"
+																			}`}
+																		>
+																			{SYSTEM_NAMES[game.system] || game.system}
+																		</span>
+																		{game.lastPlayed && (
+																			<span className="text-xs text-zinc-500">
+																				{formatRelativeTime(game.lastPlayed)}
+																			</span>
+																		)}
+																		{isExternalSystem(game.system) && (
+																			<span className="text-xs">🖥️</span>
+																		)}
+																	</div>
+																</div>
+
+																{/* Play indicator */}
+																<div className="text-zinc-500 text-xl">▶</div>
+															</button>
+														))}
+													</div>
 												</div>
-											</div>
-										))}
+											)
+										)}
 									</div>
 								) : (
 									// Flat list
@@ -651,17 +699,28 @@ export function GameLibrary({ onSelectGame }: GameLibraryProps) {
 												{/* Mini thumbnail or icon */}
 												<div className="w-12 h-12 flex-shrink-0 rounded bg-zinc-900 flex items-center justify-center overflow-hidden">
 													{game.coverArt ? (
-														<img src={game.coverArt} alt="" className="w-full h-full object-cover" />
+														<img
+															src={game.coverArt}
+															alt=""
+															className="w-full h-full object-cover"
+														/>
 													) : (
 														<span className="text-xl opacity-50">🎮</span>
 													)}
 												</div>
-												
+
 												{/* Game info */}
 												<div className="flex-1 min-w-0">
-														<div className="font-semibold text-base text-white truncate">{game.title}</div>
+													<div className="font-semibold text-base text-white truncate">
+														{game.title}
+													</div>
 													<div className="flex items-center gap-2 mt-0.5">
-														<span className={`text-xs px-1.5 py-0.5 rounded ${SYSTEM_BADGE_COLORS[game.system] || "bg-zinc-700"}`}>
+														<span
+															className={`text-xs px-1.5 py-0.5 rounded ${
+																SYSTEM_BADGE_COLORS[game.system] ||
+																"bg-zinc-700"
+															}`}
+														>
 															{SYSTEM_NAMES[game.system] || game.system}
 														</span>
 														{game.lastPlayed && (
@@ -699,7 +758,9 @@ export function GameLibrary({ onSelectGame }: GameLibraryProps) {
 											onClick={(e) => {
 												jumpToLetter(letter);
 												// Close the details
-												const details = (e.target as HTMLElement).closest("details");
+												const details = (e.target as HTMLElement).closest(
+													"details"
+												);
 												if (details) details.removeAttribute("open");
 											}}
 											disabled={!activeLetters.has(letter)}
