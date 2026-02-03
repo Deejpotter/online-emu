@@ -601,8 +601,12 @@
             },
             // N64 (mupen64plus_next) - Defaults are generally good
             'n64': {},
-            // NDS (melonDS/desmume) - Defaults
-            'nds': {},
+            // NDS (melonDS) - Enable touch mode for touchscreen support
+            // Touch mode allows direct touchscreen input instead of mouse cursor
+            // Options: 'Mouse' (cursor), 'Touch' (direct), 'Joystick', 'disabled'
+            'nds': {
+                'melonds_touch_mode': 'Touch',
+            },
         };
 
         // Get defaults for current core, or empty object

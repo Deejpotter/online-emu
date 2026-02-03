@@ -2,7 +2,7 @@
  * ServerStatus Component
  *
  * Displays connection info and server status.
- * Shows IP address, QR code for mobile connection, and active sessions.
+ * Shows IP address for mobile connection.
  */
 
 "use client";
@@ -17,16 +17,9 @@ interface ServerStatusData {
 		primaryIp: string | null;
 		allIps: string[];
 		port: number;
-		mdnsAdvertising: boolean;
 	};
 	emulation: {
 		supportedSystems: string[];
-		currentGame: {
-			title: string;
-			system: string;
-		} | null;
-		gameState: "playing" | "paused" | "stopped";
-		connectedPlayers: number;
 	};
 }
 
@@ -148,57 +141,23 @@ export function ServerStatus() {
 				) : (
 					<p className="text-zinc-500 text-sm">No network address available</p>
 				)}
-
-				{status.network.mdnsAdvertising && (
-					<p className="text-xs text-green-400 flex items-center gap-1">
-						<span>📡</span> Broadcasting via mDNS (auto-discovery enabled)
-					</p>
-				)}
 			</div>
 
-			{/* Connection Info */}
+			{/* Supported Systems */}
 			<div className="pt-4 border-t border-zinc-700 space-y-2">
-				<div className="flex justify-between text-sm">
-					<span className="text-zinc-400">Connected Players</span>
-					<span className="font-medium">
-						{status.emulation.connectedPlayers} / 4
-					</span>
-				</div>
-
-				{status.emulation.currentGame && (
-					<div className="flex justify-between text-sm">
-						<span className="text-zinc-400">Now Playing</span>
-						<span className="font-medium text-blue-400">
-							{status.emulation.currentGame.title}
-						</span>
-					</div>
-				)}
-
-				<div className="flex justify-between text-sm">
-					<span className="text-zinc-400">Status</span>
-					<span
-						className={`
-            font-medium
-            ${status.emulation.gameState === "playing" ? "text-green-400" : ""}
-            ${status.emulation.gameState === "paused" ? "text-yellow-400" : ""}
-            ${status.emulation.gameState === "stopped" ? "text-zinc-400" : ""}
-          `}
-					>
-						{status.emulation.gameState.charAt(0).toUpperCase() +
-							status.emulation.gameState.slice(1)}
-					</span>
-				</div>
+				<span className="text-zinc-400 text-sm">Supported Systems</span>
+				<p className="text-xs text-zinc-500">
+					{status.emulation.supportedSystems.length} systems available
+				</p>
 			</div>
 
 			{/* Mobile Connection Instructions */}
 			<div className="pt-4 border-t border-zinc-700">
 				<p className="text-sm text-zinc-400 mb-2">📱 To connect from mobile:</p>
 				<ol className="text-xs text-zinc-500 space-y-1 list-decimal list-inside">
-					<li>Install the OnlineEmu app on your phone</li>
-					<li>Connect to the same WiFi network</li>
-					<li>
-						The server will be auto-discovered, or enter the address above
-					</li>
+					<li>Connect to the same WiFi network as this PC</li>
+					<li>Open the address above in your mobile browser</li>
+					<li>Add to home screen for app-like experience</li>
 				</ol>
 			</div>
 		</div>

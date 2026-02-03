@@ -1,11 +1,7 @@
 /**
- * Custom Next.js Server with WebSocket Support
+ * Custom Next.js Server
  *
- * This custom server wraps the Next.js application and adds:
- * - Socket.IO for real-time communication
- * - mDNS service advertisement for local network discovery
- * - WebRTC signaling support
- * - Virtual gamepad support for external emulators (PS2/GameCube)
+ * This custom server wraps the Next.js application.
  *
  * Usage:
  *   npm run dev     - Development mode with hot reload
@@ -16,19 +12,9 @@
 import { createServer } from "http";
 import { parse } from "url";
 import next from "next";
-import { initSocketServer } from "./src/lib/socket-server";
-import {
-	startMdnsAdvertisement,
-	stopMdnsAdvertisement,
-	getPrimaryLocalIp,
-} from "./src/lib/mdns-service";
 import { initializeRomDirectory, scanForNewRoms } from "./src/lib/game-library";
-import {
-	initializeViGEm,
-	cleanupAllControllers,
-	isVirtualGamepadAvailable,
-} from "./src/lib/virtual-gamepad";
 import { stopAllEmulators } from "./src/lib/emulator-launcher";
+import os from "os";
 
 // Environment configuration
 const dev = process.env.NODE_ENV !== "production";
@@ -38,6 +24,24 @@ const port = parseInt(process.env.PORT || "3000", 10);
 // Initialize Next.js
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
+
+/**
+ * Get primary local IP address
+ */
+function getPrimaryLocalIp(): string | null {
+	const interfaces = os.networkInterfaces();
+	for (const name of Object.keys(interfaces)) {
+		const iface = interfaces[name];
+		if (!iface) continue;
+
+		for (const alias of iface) {
+			if (alias.family === "IPv4" && !alias.internal) {
+				return alias.address;
+			}
+		}
+	}
+	return null;
+}
 
 async function main() {
 	try {
@@ -53,16 +57,6 @@ async function main() {
 		const { added, total } = await scanForNewRoms();
 		console.log(`[Server] Found ${total} games (${added} new)`);
 
-		// Initialize virtual gamepad support (optional - for PS2/GameCube)
-		const vigemAvailable = await initializeViGEm();
-		if (vigemAvailable) {
-			console.log("[Server] Virtual gamepad support enabled (PS2/GameCube)");
-		} else {
-			console.log(
-				"[Server] Virtual gamepad not available (PS2/GameCube support disabled)"
-			);
-		}
-
 		// Create HTTP server
 		const server = createServer((req, res) => {
 			try {
@@ -74,10 +68,6 @@ async function main() {
 				res.end("Internal Server Error");
 			}
 		});
-
-		// Initialize Socket.IO
-		initSocketServer(server);
-		console.log("[Server] Socket.IO initialized");
 
 		// Start the server
 		server.listen(port, hostname, () => {
@@ -100,26 +90,18 @@ async function main() {
 			}
 
 			console.log("");
-			console.log("   📱 Connect your mobile device to the same network");
-			console.log("      and open the OnlineEmu app to start playing!");
-			console.log("");
+			console.log("   Press Ctrl+C to stop");
 			console.log(
 				"═══════════════════════════════════════════════════════════"
 			);
 			console.log("");
-
-			// Start mDNS advertisement for local network discovery
-			startMdnsAdvertisement(port);
 		});
 
 		// Graceful shutdown handling
 		const shutdown = async () => {
 			console.log("\n[Server] Shutting down...");
 
-			stopMdnsAdvertisement();
-
 			// Cleanup external emulator resources
-			cleanupAllControllers();
 			stopAllEmulators();
 
 			server.close(() => {

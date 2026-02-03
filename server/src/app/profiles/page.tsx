@@ -16,7 +16,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 // Available avatar emojis for profile creation
@@ -46,7 +46,21 @@ interface Profile {
 	createdAt: string;
 }
 
-export default function ProfilesPage() {
+/**
+ * Loading fallback for Suspense boundary
+ */
+function ProfilesLoading() {
+	return (
+		<div className="min-h-screen bg-linear-to-b from-zinc-900 to-zinc-950 flex items-center justify-center">
+			<div className="text-zinc-400">Loading profiles...</div>
+		</div>
+	);
+}
+
+/**
+ * Main profiles page content - wrapped in Suspense due to useSearchParams
+ */
+function ProfilesPageContent() {
 	const router = useRouter();
 	const searchParams = useSearchParams();
 	const redirectUrl = searchParams.get("redirect") || "/";
@@ -310,5 +324,16 @@ export default function ProfilesPage() {
 				</div>
 			)}
 		</div>
+	);
+}
+
+/**
+ * Profiles page with Suspense boundary for useSearchParams
+ */
+export default function ProfilesPage() {
+	return (
+		<Suspense fallback={<ProfilesLoading />}>
+			<ProfilesPageContent />
+		</Suspense>
 	);
 }

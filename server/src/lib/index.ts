@@ -3,5 +3,6 @@
  */
 
 export * from "./game-library";
-export * from "./socket-server";
-export * from "./mdns-service";
+export * from "./profiles";
+export * from "./emulator-config";
+export * from "./emulator-launcher";

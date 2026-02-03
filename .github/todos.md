@@ -416,3 +416,69 @@ RetroArch has a web player but **NO PS2/GameCube cores** for web:
 - 🔲 Cloud sync (optional, for those who want it)
 - 🔲 Remote access via Tailscale or Cloudflare Tunnel
 - 🔲 Play! PS2 emulator integration (WebAssembly)
+
+---
+
+## 🔧 Phase 6: Production Deployment (In Progress)
+
+### Summary
+
+**Goal**: Get the app running as a background process at startup so it's always accessible at `10.0.0.13:3000`.
+
+**Approach**: Fix build errors, then use PM2 for process management with Windows startup integration.
+
+### Step 1: Fix Build Errors
+
+**Logic**: The build is failing due to code issues that need to be fixed before we can deploy.
+
+**Sub-steps**:
+- ✅ 1.1 Fix syntax error in `api/status/route.ts` (extra closing brace)
+- ✅ 1.2 Fix `useSearchParams()` Suspense boundary issue in `/profiles` page
+  - Next.js 13+ requires `useSearchParams()` to be wrapped in `<Suspense>`
+  - Solution: Split into ProfilesPageContent component + wrapper with Suspense
+- ✅ 1.3 Verify build succeeds with `yarn build`
+
+### Step 2: Configure PM2 for Process Management
+
+**Logic**: PM2 manages Node.js processes - auto-restart on crash, logging, and startup scripts.
+
+**Sub-steps**:
+- ✅ 2.1 Install PM2 globally (`npm install -g pm2`)
+- ✅ 2.2 Create `ecosystem.config.js` with correct Next.js path
+  - Windows requires using `node_modules/next/dist/bin/next` directly
+  - Fork mode (not cluster) for proper operation
+- ✅ 2.3 Create logs directory for PM2 output
+- ✅ 2.4 Start the app with PM2 (`pm2 start ecosystem.config.js`)
+- ✅ 2.5 Verify app is running (`pm2 status`)
+
+### Step 3: Configure Windows Startup
+
+**Logic**: PM2 can generate startup scripts so the app runs automatically on boot.
+
+**Sub-steps**:
+- ✅ 3.1 Install `pm2-windows-startup` (standard pm2 startup doesn't work on Windows)
+- ✅ 3.2 Run `pm2-startup install` to add registry entry
+- ✅ 3.3 Save current process list (`pm2 save`)
+- 🔲 3.4 Test by rebooting and verifying app starts automatically (manual test)
+
+### Step 4: Verify Network Access
+
+**Logic**: Ensure the app is accessible from other devices on the LAN.
+
+**Sub-steps**:
+- ✅ 4.1 Verify app responds at `http://10.0.0.13:3000` (confirmed in logs)
+- ✅ 4.2 Fix `primaryIp` TypeError - API was missing `network` object
+  - Updated `api/status/route.ts` to return `network` object with IP info
+  - Simplified `ServerStatus.tsx` to match the current API structure
+- 🔲 4.3 Test from mobile device on same network (manual test)
+- 🔲 4.4 Verify NDS touch screen fix is working (manual test)
+
+### Note on Cross-Origin-Opener-Policy Warning
+
+When accessing the app via LAN IP (e.g., `10.0.0.13`) instead of `localhost`:
+- The COOP/COEP headers are ignored by browsers for security reasons
+- This only affects `SharedArrayBuffer` which is needed for **threaded WASM cores**
+- **Workaround**: Most EmulatorJS cores work without threads
+- **Full solution**: Use HTTPS (self-signed cert) or access via `localhost`
+
+The app will still work for most games - threading is only needed for performance-intensive cores.

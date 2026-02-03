@@ -146,9 +146,9 @@ export function GameCard({ game, onSelect }: GameCardProps) {
 
 			{/* Game Info */}
 			<div className="p-4">
-				<h3 className="font-semibold text-lg truncate mb-1">{game.title}</h3>
+				<h3 className="font-bold text-xl truncate mb-1.5 text-white" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>{game.title}</h3>
 
-				<div className="flex items-center gap-2 text-sm text-zinc-400">
+				<div className="flex items-center gap-2 text-sm text-zinc-300">
 					<span className="px-2 py-0.5 rounded-full bg-zinc-800 text-xs">
 						{systemName}
 					</span>
