@@ -4,25 +4,19 @@
  * Displays a single game in the library grid.
  * Shows cover art (or placeholder), title, system, and play stats.
  *
- * Streaming Types:
- * - EmulatorJS games (most systems): Run in browser
- * - Sunshine games (PS2, GameCube): Stream via Sunshine + moonlight-web
+ * All games run via EmulatorJS in the browser - no external emulators needed.
  */
 
 "use client";
 
 import { useState } from "react";
 import type { Game, EmulatorSystem } from "@/types";
-import { isExternalSystem } from "@/types";
 
 interface GameCardProps {
 	game: Game;
 	onSelect: (game: Game) => void;
 }
 
-/**
- * Human-readable system names for display (client-side duplicate).
- */
 const SYSTEM_NAMES: Record<EmulatorSystem, string> = {
 	nes: "NES",
 	snes: "SNES",
@@ -38,9 +32,6 @@ const SYSTEM_NAMES: Record<EmulatorSystem, string> = {
 	psp: "PSP",
 	atari2600: "Atari 2600",
 	arcade: "Arcade",
-	// External systems
-	ps2: "PS2",
-	gamecube: "GameCube",
 };
 
 /**
@@ -95,7 +86,6 @@ export function GameCard({ game, onSelect }: GameCardProps) {
 	const colorClass =
 		SYSTEM_COLORS[game.system] || "bg-zinc-800/50 border-zinc-600";
 	const systemName = SYSTEM_NAMES[game.system] || game.system;
-	const isExternal = isExternalSystem(game.system);
 
 	return (
 		<button
@@ -110,14 +100,6 @@ export function GameCard({ game, onSelect }: GameCardProps) {
         focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-zinc-950
       `}
 		>
-			{/* External Emulator Badge (PS2/GameCube - launches on PC) */}
-			{isExternal && (
-				<div className="absolute top-2 right-2 z-10 px-2 py-1 bg-violet-500/90 text-white text-xs font-medium rounded-full shadow-lg flex items-center gap-1">
-					<span>🖥️</span>
-					<span>PC</span>
-				</div>
-			)}
-
 			{/* Cover Art / Placeholder */}
 			<div className="aspect-4/3 bg-zinc-900 flex items-center justify-center relative">
 				{game.coverArt ? (

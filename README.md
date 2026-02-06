@@ -1,44 +1,20 @@
 # Online Emulator
 
-Self-hosted game console emulator that runs on your PC and streams to your phone for remote play with on-screen or physical controller support.
+Self-hosted retro game emulator powered by EmulatorJS. Play classic console games in your browser with support for save states, profiles, and PWA installation.
 
-## Architecture
+## Features
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                     Your PC (Server)                         │
-│  ┌─────────────────┐    ┌─────────────────────────────────┐ │
-│  │   Next.js App   │    │   Streaming Browser Window       │ │
-│  │   (Port 3000)   │───▶│   - EmulatorJS runs here        │ │
-│  │   - ROM API     │    │   - Canvas capture → WebRTC     │ │
-│  │   - WebSocket   │    │   - All emulation on PC         │ │
-│  └─────────────────┘    └─────────────────────────────────┘ │
-│           │                          │                       │
-│           │ Socket.IO                │ WebRTC Video          │
-└───────────┼──────────────────────────┼───────────────────────┘
-            │                          │
-      ┌─────▼──────────────────────────▼─────┐
-      │          Your Phone (Client)          │
-      │  ┌─────────────────────────────────┐ │
-      │  │     Expo/React Native App       │ │
-      │  │  - Video display (thin client)  │ │
-      │  │  - Virtual gamepad overlay      │ │
-      │  │  - Bluetooth controller input   │ │
-      │  │  - Sends inputs via WebSocket   │ │
-      │  └─────────────────────────────────┘ │
-      └───────────────────────────────────────┘
-```
-
-## Why This Architecture?
-
-- **All processing on PC** - Emulation runs on your powerful PC, not your phone
-- **Phone is just a display** - Receives video stream, sends controller inputs
-- **Supports powerful consoles** - Can run PS1, N64, and more without taxing your phone
-- **Low phone battery/memory usage** - Video decoding is hardware-accelerated
+- **Browser-Based Emulation** - EmulatorJS runs entirely in your browser using WebAssembly cores
+- **Multi-User Profiles** - Netflix-style profile system to separate saves between users
+- **Save States** - Manual save/load states plus automatic in-game saves (SRM)
+- **PWA Support** - Install as a native app on any device (mobile, tablet, desktop)
+- **Gamepad Support** - Automatic detection of USB/Bluetooth controllers via Browser Gamepad API
+- **Offline-Ready** - Service worker caches games and assets for offline play
+- **Self-Hosted** - Complete control over your data, no external dependencies
 
 ## Quick Start
 
-### Server Setup
+### Local Development
 
 ```bash
 cd server
@@ -46,81 +22,175 @@ npm install          # Also downloads EmulatorJS automatically
 npm run dev          # Starts at http://localhost:3000
 ```
 
-### Mobile Setup
+### Production Deployment (Vultr VPS)
+
+This project is designed to run on a Vultr VPS (Standard plan recommended: $12/mo, 80GB SSD, 4GB RAM).
 
 ```bash
-cd mobile
+# 1. Clone and install
+git clone <your-repo-url> online-emu
+cd online-emu/server
 npm install
-npx expo start       # Scan QR code with Expo Go app
+npm run build
+
+# 2. Create ROMs directory (outside web root)
+mkdir -p /root/online-emu/roms
+
+# 3. Configure environment
+cp .env.example .env
+# Edit .env and set: GAMES_DIR=/root/online-emu/roms
+
+# 4. Start with PM2
+npm install -g pm2
+pm2 start ecosystem.config.js
+pm2 save
+pm2 startup  # Follow instructions to enable auto-start
+
+# 5. Upload ROMs via vimms-downloader or SCP
+# ROMs go to /root/online-emu/roms/{system}/
 ```
+
+Visit `http://your-server-ip:3000` to access the app.
 
 ### Adding Games
 
-Place ROM files in the appropriate system folder:
+**Development (local):**
 
 ```
 server/public/roms/
 ├── nes/           # .nes files
 ├── snes/          # .sfc, .smc files
-├── gb/            # .gb files
-├── gba/           # .gba files
-├── n64/           # .n64, .z64 files
-├── psx/           # .bin/.cue, .iso files
 └── ...
 ```
+
+**Production (Vultr):**
+
+```bash
+# Recommended: Store ROMs outside web root
+mkdir -p /root/online-emu/roms
+
+# Configure in server/.env
+GAMES_DIR=/root/online-emu/roms
+
+# Structure:
+/root/online-emu/roms/
+├── nes/
+├── snes/
+└── ...
+```
+
+The app automatically scans these directories on startup.
+
+## Supported Systems
+
+All systems run using EmulatorJS WebAssembly cores - no external emulators required.
+
+| System | Emulator Core | File Extensions |
+|--------|--------------|-----------------|
+| NES | FCEUmm | .nes, .fds |
+| SNES | Snes9x | .sfc, .smc |
+| Game Boy / Color | Gambatte | .gb, .gbc |
+| Game Boy Advance | mGBA | .gba |
+| N64 | Mupen64Plus | .n64, .z64, .v64 |
+| Nintendo DS | DeSmuME | .nds |
+| PlayStation | PCSX ReARMed | .bin/.cue, .iso, .chd |
+| PSP | PPSSPP | .iso, .cso |
+| Sega Genesis | Genesis Plus GX | .md, .bin, .gen |
+| Sega Master System | Genesis Plus GX | .sms |
+| Sega Game Gear | Genesis Plus GX | .gg |
+| Sega CD | Genesis Plus GX | .bin/.cue, .iso |
+| Atari 2600 | Stella | .a26, .bin |
+| Arcade | MAME 2003 Plus | .zip |
+
+**Note:** PS2 and GameCube are not supported - their emulators (PCSX2/Dolphin) require desktop applications and cannot run in a browser.
 
 ## Tech Stack
 
 | Component | Technology |
 |-----------|------------|
-| **Server** | Next.js 16 + TypeScript |
-| **Emulation** | EmulatorJS (WebAssembly/libretro) |
-| **Streaming** | WebRTC (simple-peer) |
-| **Real-time** | Socket.IO |
-| **Discovery** | mDNS (bonjour-service) |
-| **Mobile** | Expo + React Native |
-| **Controls** | react-native-gesture-handler |
-
-## Supported Systems
-
-| System | Core | Status |
-|--------|------|--------|
-| NES | FCEUmm | ✅ Ready |
-| SNES | Snes9x | ✅ Ready |
-| Game Boy / Color | Gambatte | ✅ Ready |
-| Game Boy Advance | mGBA | ✅ Ready |
-| N64 | Mupen64Plus | ✅ Ready |
-| PlayStation | PCSX ReARMed | ✅ Ready |
-| Sega Genesis | Genesis Plus GX | ✅ Ready |
+| **Framework** | Next.js 16 (App Router) + TypeScript |
+| **Emulation** | EmulatorJS (WebAssembly/libretro cores) |
+| **Profiles** | Local JSON storage (no authentication) |
+| **Saves** | Server-side file storage (state + SRM) |
+| **PWA** | Service worker for offline support |
+| **Deployment** | Vultr VPS + PM2 + Nginx |
 
 ## Project Structure
 
 ```
 online-emu/
-├── server/                 # Next.js server (PC)
+├── server/                 # Next.js application
 │   ├── src/
 │   │   ├── app/           # Next.js App Router
 │   │   │   ├── api/       # REST API endpoints
-│   │   │   ├── play/      # Emulator page
-│   │   │   └── stream/    # Streaming page (WebRTC source)
-│   │   └── lib/           # Shared utilities
+│   │   │   │   ├── profiles/      # Profile CRUD
+│   │   │   │   ├── saves/         # Save state storage
+│   │   │   │   ├── srm/           # In-game saves
+│   │   │   │   └── games/         # ROM library
+│   │   │   ├── play/      # Emulator page (iframe wrapper)
+│   │   │   └── profiles/  # Profile selection UI
+│   │   ├── lib/           # Utilities
+│   │   │   ├── profiles.ts        # Profile management
+│   │   │   └── game-library.ts    # ROM scanning
+│   │   ├── middleware.ts          # Profile auth check
+│   │   └── types/         # TypeScript definitions
 │   ├── public/
-│   │   ├── emulatorjs/    # Self-hosted EmulatorJS
+│   │   ├── emulator.html  # EmulatorJS host (must be in iframe)
+│   │   ├── emulatorjs/    # Self-hosted EmulatorJS assets
+│   │   ├── sw.js          # Service worker
 │   │   └── roms/          # Game files (user-provided)
-│   └── server.ts          # Custom server with Socket.IO
+│   ├── data/              # App data (auto-created)
+│   │   ├── profiles.json       # User profiles
+│   │   └── metadata.json       # Game metadata cache
+│   ├── ecosystem.config.js     # PM2 configuration
+│   └── server.ts          # Custom Next.js server
 │
-├── mobile/                 # Expo app (Phone)
-│   ├── src/
-│   │   ├── components/    # UI (VirtualController, etc.)
-│   │   ├── screens/       # App screens
-│   │   ├── services/      # WebRTC, Socket clients
-│   │   └── hooks/         # Custom React hooks
-│   └── app/               # Expo Router screens
-│
+
 └── .github/
     ├── copilot-instructions.md   # AI coding guidelines
+    ├── instructions/             # Path-specific guides
     └── todos.md                   # Development progress
 ```
+
+## User Profiles
+
+The app uses a simple local profile system (like Netflix/Plex) - no passwords or authentication required.
+
+- Select or create a profile on first visit
+- Profiles separate save files between users
+- All data stored locally on the server
+- Perfect for family/friend sharing
+
+## Save System
+
+EmulatorJS provides two types of saves:
+
+1. **Save States (`.state`)** - Full memory snapshots for quick save/load
+   - Manual saves via UI buttons
+   - Stored in `roms/{system}/saves/{profileId}/{game}.state`
+   - Auto-saved every 30 seconds as backup
+
+2. **SRM Saves (`.srm`)** - In-game battery/memory card saves  
+   - Automatic from game's internal save system
+   - Stored in `roms/{system}/saves/{profileId}/{game}.srm`
+   - Auto-loaded on game start
+
+## Storage Requirements
+
+Based on typical ROM sizes for a retro collection:
+
+| System | Typical ROM Size | ~100 Games |
+|--------|------------------|------------|
+| NES | 40-512 KB | ~50 MB |
+| SNES | 512 KB - 6 MB | ~200 MB |
+| GB/GBC | 32 KB - 2 MB | ~100 MB |
+| GBA | 4-32 MB | ~1.5 GB |
+| N64 | 8-64 MB | ~3 GB |
+| Genesis | 512 KB - 4 MB | ~150 MB |
+| PSX | 300-700 MB | ~35 GB |
+| PSP | 500 MB - 1.5 GB | ~80 GB |
+
+**Vultr Standard Plan (80GB SSD)** easily handles a mixed retro library of 200+ smaller games or 50+ larger PSX/PSP titles.
 
 ## Development
 

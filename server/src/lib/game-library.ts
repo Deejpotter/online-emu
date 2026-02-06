@@ -6,13 +6,17 @@
  *   {GAMES_DIR}/{SystemName}/ROMs/
  *
  * Configure via GAMES_DIR environment variable or edit the path below.
+ *
+ * IMPORTANT: Only browser-compatible systems are supported.
+ * EmulatorJS uses WebAssembly cores that run in the browser, which limits
+ * us to older consoles (NES through PSX/N64). More demanding systems like
+ * PS2 and GameCube cannot run in-browser and are not supported.
  */
 
 import fs from "fs/promises";
 import path from "path";
 import { v4 as uuidv4 } from "uuid";
 import type { Game, GameLibrary, EmulatorSystem } from "@/types";
-import { isExternalSystem } from "@/types";
 
 // Path to the games directory - configure this to your games folder
 // Can also be set via GAMES_DIR environment variable
@@ -25,9 +29,11 @@ const METADATA_PATH = path.join(DATA_DIR, "metadata.json");
 /**
  * File extensions recognized for each emulator system.
  * Used when scanning directories for ROMs.
+ *
+ * Why these systems: All are supported by EmulatorJS WebAssembly cores
+ * and can run efficiently in modern browsers.
  */
 const SYSTEM_EXTENSIONS: Record<EmulatorSystem, string[]> = {
-	// Internal systems (EmulatorJS)
 	nes: [".nes", ".fds", ".zip"],
 	snes: [".sfc", ".smc", ".zip"],
 	gb: [".gb", ".gbc", ".zip"],
@@ -42,14 +48,14 @@ const SYSTEM_EXTENSIONS: Record<EmulatorSystem, string[]> = {
 	psp: [".iso", ".cso", ".zip", ".pbp"],
 	atari2600: [".a26", ".bin", ".zip"],
 	arcade: [".zip"],
-	// External systems (desktop emulators)
-	ps2: [".iso", ".chd", ".bin", ".cue", ".gz"],
-	gamecube: [".iso", ".gcm", ".gcz", ".rvz", ".wbfs", ".ciso", ".nkit.iso"],
 };
 
 /**
  * Map folder names in the games directory to EmulatorSystem IDs.
  * This allows flexible folder naming (e.g., "NES", "Genesis", "PS1").
+ *
+ * Why case-insensitive: Folder names are normalized to lowercase before matching,
+ * so users can organize their ROMs however they prefer.
  */
 const FOLDER_TO_SYSTEM: Record<string, EmulatorSystem> = {
 	// Nintendo
@@ -87,14 +93,6 @@ const FOLDER_TO_SYSTEM: Record<string, EmulatorSystem> = {
 	playstation: "psx",
 	psp: "psp",
 	"playstation portable": "psp",
-	ps2: "ps2",
-	"playstation 2": "ps2",
-	pcsx2: "ps2",
-	// Nintendo (external)
-	gc: "gamecube",
-	gamecube: "gamecube",
-	"game cube": "gamecube",
-	dolphin: "gamecube",
 	// Atari
 	atari2600: "atari2600",
 	"atari 2600": "atari2600",
@@ -103,9 +101,6 @@ const FOLDER_TO_SYSTEM: Record<string, EmulatorSystem> = {
 	mame: "arcade",
 };
 
-/**
- * Human-readable system names for display.
- */
 export const SYSTEM_NAMES: Record<EmulatorSystem, string> = {
 	nes: "Nintendo Entertainment System",
 	snes: "Super Nintendo",
@@ -121,9 +116,6 @@ export const SYSTEM_NAMES: Record<EmulatorSystem, string> = {
 	psp: "PlayStation Portable",
 	atari2600: "Atari 2600",
 	arcade: "Arcade (MAME)",
-	// External systems
-	ps2: "PlayStation 2",
-	gamecube: "GameCube",
 };
 
 /**
@@ -271,7 +263,7 @@ export async function scanForNewRoms(): Promise<{
 				const filePath = path.join(dir, entry.name);
 				const stats = await fs.stat(filePath);
 
-				// Create new game entry
+				// Create new game entry - all games use EmulatorJS in browser
 				const newGame: Game = {
 					id: uuidv4(),
 					title: filenameToTitle(entry.name),
@@ -279,7 +271,6 @@ export async function scanForNewRoms(): Promise<{
 					romPath,
 					fileSize: stats.size,
 					playCount: 0,
-					isExternal: isExternalSystem(system),
 				};
 
 				library.games.push(newGame);

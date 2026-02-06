@@ -13,7 +13,6 @@ import { createServer } from "http";
 import { parse } from "url";
 import next from "next";
 import { initializeRomDirectory, scanForNewRoms } from "./src/lib/game-library";
-import { stopAllEmulators } from "./src/lib/emulator-launcher";
 import os from "os";
 
 // Environment configuration
@@ -100,9 +99,6 @@ async function main() {
 		// Graceful shutdown handling
 		const shutdown = async () => {
 			console.log("\n[Server] Shutting down...");
-
-			// Cleanup external emulator resources
-			stopAllEmulators();
 
 			server.close(() => {
 				console.log("[Server] HTTP server closed");

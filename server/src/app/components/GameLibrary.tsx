@@ -11,7 +11,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { GameCard } from "./GameCard";
 import type { Game, EmulatorSystem } from "@/types";
-import { isExternalSystem } from "@/types";
 
 interface GameLibraryProps {
 	onSelectGame: (game: Game) => void;
@@ -44,9 +43,6 @@ const SYSTEM_NAMES: Record<EmulatorSystem, string> = {
 	psp: "PSP",
 	atari2600: "Atari 2600",
 	arcade: "Arcade",
-	// External systems
-	ps2: "PS2",
-	gamecube: "GameCube",
 };
 
 /**
@@ -668,9 +664,6 @@ export function GameLibrary({ onSelectGame }: GameLibraryProps) {
 																				{formatRelativeTime(game.lastPlayed)}
 																			</span>
 																		)}
-																		{isExternalSystem(game.system) && (
-																			<span className="text-xs">🖥️</span>
-																		)}
 																	</div>
 																</div>
 
@@ -727,9 +720,6 @@ export function GameLibrary({ onSelectGame }: GameLibraryProps) {
 															<span className="text-xs text-zinc-500">
 																{formatRelativeTime(game.lastPlayed)}
 															</span>
-														)}
-														{isExternalSystem(game.system) && (
-															<span className="text-xs">🖥️</span>
 														)}
 													</div>
 												</div>

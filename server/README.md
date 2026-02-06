@@ -76,7 +76,34 @@ Communication between React and EmulatorJS uses `postMessage`.
 | Enter | Start |
 | Shift | Select |
 
+## Production Deployment
+
+For production deployment on a Vultr VPS:
+
+```bash
+# Build the application
+npm run build
+
+# Start with PM2
+npm install -g pm2
+pm2 start ecosystem.config.js
+pm2 save
+pm2 startup
+
+# The server runs on port 3000 by default
+# Configure Nginx as reverse proxy for SSL/domain mapping
+```
+
+**Recommended Vultr Plan**: Standard ($12/mo)
+
+- 80GB SSD storage (sufficient for 200+ retro games)
+- 4GB RAM
+- 3TB monthly bandwidth
+
+See the main [README.md](../README.md) for full deployment instructions.
+
 ## Learn More
 
 - [EmulatorJS Docs](https://emulatorjs.org/docs)
 - [Next.js Documentation](https://nextjs.org/docs)
+- [PM2 Guide](https://pm2.keymetrics.io/docs/)

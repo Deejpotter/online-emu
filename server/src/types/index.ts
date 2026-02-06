@@ -37,60 +37,36 @@ export interface CreateProfileRequest {
 // =============================================================================
 
 /**
- * Supported emulator systems.
- * Systems are divided into "internal" (EmulatorJS) and "external" (desktop emulators).
+ * Supported emulator systems - all browser-based via EmulatorJS.
+ *
+ * Why browser-only: EmulatorJS uses WebAssembly for emulation cores, allowing
+ * these systems to run entirely in the browser. More demanding systems (PS2, GameCube)
+ * cannot run in-browser due to performance limitations and are not supported.
+ *
+ * This keeps the application simple for VPS deployment - no need for desktop
+ * emulators, screen capture, or streaming infrastructure.
  */
 export type EmulatorSystem =
-	// Internal systems (EmulatorJS)
-	| "nes" // Nintendo Entertainment System
-	| "snes" // Super Nintendo
-	| "gb" // Game Boy
-	| "gba" // Game Boy Advance
-	| "n64" // Nintendo 64
-	| "nds" // Nintendo DS
-	| "segaMD" // Sega Genesis/Mega Drive
+	| "nes" // Nintendo Entertainment System (FCEUmm core)
+	| "snes" // Super Nintendo (Snes9x core)
+	| "gb" // Game Boy (Gambatte core)
+	| "gba" // Game Boy Advance (mGBA core)
+	| "n64" // Nintendo 64 (Mupen64Plus core)
+	| "nds" // Nintendo DS (DeSmuME core)
+	| "segaMD" // Sega Genesis/Mega Drive (Genesis Plus GX)
 	| "segaMS" // Sega Master System
 	| "segaGG" // Sega Game Gear
 	| "segaCD" // Sega CD
-	| "psx" // PlayStation 1
-	| "psp" // PlayStation Portable
+	| "psx" // PlayStation 1 (PCSX ReARMed) - Note: Large games may crash browsers
+	| "psp" // PlayStation Portable (PPSSPP core)
 	| "atari2600" // Atari 2600
-	| "arcade" // Arcade (MAME)
-	// External systems (desktop emulators required)
-	| "ps2" // PlayStation 2 (PCSX2)
-	| "gamecube"; // GameCube (Dolphin)
-
-/**
- * Systems that require external desktop emulators.
- * These cannot run in EmulatorJS and need screen capture streaming.
- */
-export const EXTERNAL_SYSTEMS: EmulatorSystem[] = ["ps2", "gamecube"];
-
-/**
- * Check if a system requires an external emulator.
- */
-export function isExternalSystem(system: EmulatorSystem): boolean {
-	return EXTERNAL_SYSTEMS.includes(system);
-}
-
-/**
- * Configuration for an external emulator.
- */
-export interface ExternalEmulatorConfig {
-	/** System this emulator handles */
-	system: EmulatorSystem;
-	/** Human-readable emulator name */
-	name: string;
-	/** Path to emulator executable */
-	executablePath: string;
-	/** Command line arguments template. Use {ROM} as placeholder for ROM path */
-	launchArgs: string[];
-	/** Whether the emulator is currently configured and available */
-	isConfigured: boolean;
-}
+	| "arcade"; // Arcade (MAME core)
 
 /**
  * Represents a game ROM in the library.
+ *
+ * Games are detected by scanning the roms/ directory for supported file extensions.
+ * Each game is played through EmulatorJS in the browser - no external emulators needed.
  */
 export interface Game {
 	/** Unique identifier (UUID) */
@@ -111,8 +87,6 @@ export interface Game {
 	playCount?: number;
 	/** Optional description or notes */
 	description?: string;
-	/** Whether this game requires an external emulator */
-	isExternal?: boolean;
 }
 
 /**
@@ -254,66 +228,6 @@ export interface SignalingMessage {
 	sourceClientId: string;
 	/** SDP or ICE candidate data */
 	payload: RTCSessionDescriptionInit | RTCIceCandidateInit;
-}
-
-// =============================================================================
-// Socket.IO Event Map
-// =============================================================================
-
-/**
- * Events sent from client to server.
- */
-export interface ClientToServerEvents {
-	/** Controller button input */
-	input: (data: InputEvent) => void;
-	/** Analog stick input */
-	analog: (data: AnalogInput) => void;
-	/** Client connection handshake */
-	connect_request: (data: ClientInfo) => void;
-	/** Request to start/load a game */
-	load_game: (gameId: string) => void;
-	/** Request to pause/resume */
-	toggle_pause: () => void;
-	/** WebRTC signaling */
-	signal: (data: SignalingMessage) => void;
-	/** Request game list */
-	get_games: () => void;
-	/** Ping for latency measurement */
-	ping: (timestamp: number) => void;
-}
-
-/**
- * Events sent from server to client.
- */
-export interface ServerToClientEvents {
-	/** Response to connect_request */
-	connect_response: (data: ConnectionResponse) => void;
-	/** Game state synchronization */
-	game_sync: (data: GameSyncEvent) => void;
-	/** Game list response */
-	games_list: (games: Game[]) => void;
-	/** WebRTC signaling */
-	signal: (data: SignalingMessage) => void;
-	/** Error notification */
-	error: (message: string) => void;
-	/** Pong for latency measurement */
-	pong: (timestamp: number) => void;
-}
-
-/**
- * Internal server events (between Socket.IO instances).
- */
-export interface InterServerEvents {
-	// Reserved for future clustering support
-}
-
-/**
- * Per-socket data storage.
- */
-export interface SocketData {
-	clientId: string;
-	playerId?: number;
-	deviceType: "mobile" | "browser" | "other";
 }
 
 // =============================================================================

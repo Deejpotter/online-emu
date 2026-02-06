@@ -5,12 +5,13 @@
  * This is REQUIRED because EmulatorJS manipulates the DOM directly,
  * which conflicts with React's virtual DOM.
  *
- * For external systems (PS2, GameCube), shows a launch UI that
- * starts the external emulator on the PC.
- *
  * From EmulatorJS docs:
  * "To embed within React or a SPA, the only way is to embed an iframe
  *  into your page. You cannot run it directly on the page."
+ *
+ * Why iframe isolation: EmulatorJS tampers with the global window object
+ * and manipulates the DOM tree, which breaks React's virtual DOM reconciliation.
+ * Running it in an iframe provides a separate context where this is safe.
  *
  * Communication with the iframe happens via postMessage API.
  */
@@ -20,7 +21,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import type { Game, EmulatorSystem } from "@/types";
-import { isExternalSystem } from "@/types";
 import { useToast } from "@/app/components";
 
 /**
@@ -83,8 +83,9 @@ type EmulatorIncomingMessage =
 
 /**
  * Map our system IDs to EmulatorJS core names.
- * External systems (ps2, gamecube) are included for type completeness
- * but won't be used in this component (they use external emulators).
+ *
+ * These are the core identifiers that EmulatorJS expects.
+ * EmulatorJS uses libretro cores compiled to WebAssembly.
  */
 const SYSTEM_TO_CORE: Record<EmulatorSystem, string> = {
 	nes: "nes",
@@ -101,9 +102,6 @@ const SYSTEM_TO_CORE: Record<EmulatorSystem, string> = {
 	psp: "psp",
 	atari2600: "atari2600",
 	arcade: "arcade",
-	// External systems - not used in EmulatorJS but included for type safety
-	ps2: "psx", // Fallback (won't be used)
-	gamecube: "n64", // Fallback (won't be used)
 };
 
 /**
@@ -138,11 +136,6 @@ export function EmulatorContent() {
 	const [showControls, setShowControls] = useState(true);
 	const iframeRef = useRef<HTMLIFrameElement>(null);
 	const containerRef = useRef<HTMLDivElement>(null);
-
-	// External emulator states
-	const [externalLaunching, setExternalLaunching] = useState(false);
-	const [externalRunning, setExternalRunning] = useState(false);
-	const [externalError, setExternalError] = useState<string | null>(null);
 
 	// Get game ID from URL params
 	const gameId = searchParams.get("id");
@@ -300,8 +293,8 @@ export function EmulatorContent() {
 	/**
 	 * Build the iframe URL with game parameters.
 	 *
-	 * autoStart defaults to true - games start immediately.
-	 * Set autoStart=false in URL to disable (e.g., for debugging).
+	 * autoStart defaults to true - games start immediately when user clicks play.
+	 * This satisfies browser autoplay policies which require user gestures.
 	 */
 	const getEmulatorUrl = useCallback(() => {
 		if (!game) return "";
@@ -334,48 +327,6 @@ export function EmulatorContent() {
 		return `/emulator.html?${params.toString()}`;
 	}, [game, searchParams]);
 
-	/**
-	 * Launch an external emulator (PS2, GameCube)
-	 */
-	const launchExternalEmulator = useCallback(async () => {
-		if (!game) return;
-
-		setExternalLaunching(true);
-		setExternalError(null);
-
-		try {
-			const response = await fetch("/api/launch", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ gameId: game.id }),
-			});
-
-			const result = await response.json();
-
-			if (!response.ok) {
-				throw new Error(result.error || "Failed to launch emulator");
-			}
-
-			setExternalRunning(true);
-		} catch (err) {
-			setExternalError(err instanceof Error ? err.message : "Failed to launch");
-		} finally {
-			setExternalLaunching(false);
-		}
-	}, [game]);
-
-	/**
-	 * Stop the external emulator
-	 */
-	const stopExternalEmulator = useCallback(async () => {
-		try {
-			await fetch("/api/launch", { method: "DELETE" });
-			setExternalRunning(false);
-		} catch (err) {
-			console.error("[Emulator] Failed to stop external emulator:", err);
-		}
-	}, []);
-
 	// Loading state
 	if (loading) {
 		return (
@@ -402,99 +353,6 @@ export function EmulatorContent() {
 					>
 						← Back to Library
 					</a>
-				</div>
-			</div>
-		);
-	}
-
-	// External emulator (PS2, GameCube) - show launch UI instead of iframe
-	if (isExternalSystem(game.system)) {
-		const emulatorName = game.system === "ps2" ? "PCSX2" : "Dolphin";
-
-		return (
-			<div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center p-8">
-				<div className="text-center max-w-lg">
-					{/* Game Info */}
-					<div className="text-6xl mb-4">
-						{game.system === "ps2" ? "🎮" : "🎲"}
-					</div>
-					<h1 className="text-2xl font-bold mb-2">{game.title}</h1>
-					<p className="text-zinc-400 mb-6">
-						{game.system.toUpperCase()} • Requires {emulatorName}
-					</p>
-
-					{/* External Error */}
-					{externalError && (
-						<div className="mb-6 p-4 bg-red-900/30 border border-red-500/50 rounded-lg">
-							<p className="text-red-300 text-sm">{externalError}</p>
-							<p className="text-red-400/70 text-xs mt-2">
-								Make sure {emulatorName} is installed and configured in{" "}
-								<a href="/settings" className="underline hover:text-red-300">
-									Settings
-								</a>
-							</p>
-						</div>
-					)}
-
-					{/* Launch/Running State */}
-					{externalRunning ? (
-						<div className="space-y-4">
-							<div className="p-6 bg-green-900/20 border border-green-500/30 rounded-lg">
-								<div className="text-4xl mb-2 animate-pulse">▶️</div>
-								<p className="text-green-400">
-									{emulatorName} is running on your PC
-								</p>
-								<p className="text-zinc-500 text-sm mt-2">
-									The game window should be open on your computer
-								</p>
-							</div>
-
-							<button
-								onClick={stopExternalEmulator}
-								className="px-6 py-3 bg-red-600 hover:bg-red-500 rounded-lg font-medium transition-colors"
-							>
-								Stop {emulatorName}
-							</button>
-						</div>
-					) : (
-						<div className="space-y-4">
-							<button
-								onClick={launchExternalEmulator}
-								disabled={externalLaunching}
-								className="px-8 py-4 bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-700 
-									rounded-lg font-medium text-lg transition-colors w-full"
-							>
-								{externalLaunching ? (
-									<>
-										<span className="animate-pulse">Launching...</span>
-									</>
-								) : (
-									<>Launch in {emulatorName}</>
-								)}
-							</button>
-
-							<p className="text-zinc-500 text-sm">
-								This will open {emulatorName} on your PC with this game loaded
-							</p>
-						</div>
-					)}
-
-					{/* Navigation */}
-					<div className="mt-8 pt-6 border-t border-zinc-800 space-y-3">
-						<a
-							href="/"
-							className="inline-block text-zinc-400 hover:text-white transition-colors"
-						>
-							← Back to Library
-						</a>
-						<span className="text-zinc-700 mx-3">|</span>
-						<a
-							href="/settings"
-							className="inline-block text-zinc-400 hover:text-white transition-colors"
-						>
-							⚙️ Configure {emulatorName}
-						</a>
-					</div>
 				</div>
 			</div>
 		);

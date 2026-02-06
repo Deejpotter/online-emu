@@ -1,12 +1,139 @@
 # Online Emulator - Development TODOs
 
-## Status Legend
+## Current Phase: Simplify for Vultr Deployment
 
-- ��� **Todo** - Not started
-- ��� **In Progress** - Currently being worked on
-- ✅ **Completed** - Finished
+**Goal**: Remove PS2/GameCube external emulator support and optimize for browser-only emulation on a Vultr VPS with local ROM storage.
+
+**Why**:
+
+- Browser-based systems (NES through N64) work perfectly in EmulatorJS
+- PS2/GameCube require desktop emulators (PCSX2/Dolphin) which don't make sense for a web-hosted server
+- Simplifies codebase and deployment
+- Vultr Standard plan ($12/mo) provides 80GB storage - plenty for retro console ROMs
 
 ---
+
+## Status Legend
+
+- ⬜ **Todo** - Not started
+- 🔄 **In Progress** - Currently being worked on
+- ✅ **Completed** - Finished
+- ⏳ **Blocked** - Waiting on something
+
+---
+
+## 📋 Phase 5: Remove External Emulator Support & Simplify (IN PROGRESS)
+
+### 🔄 Step 1: Remove External Emulator Code
+
+- ⬜ 1.1: Delete `server/src/lib/emulator-config.ts`
+- ⬜ 1.2: Delete `server/src/lib/emulator-launcher.ts`
+- ⬜ 1.3: Delete `server/src/app/api/config/` directory
+- ⬜ 1.4: Delete `server/src/app/api/launch/` directory
+- ⬜ 1.5: Update `server/src/lib/index.ts` exports
+
+### ⬜ Step 2: Update Type Definitions
+
+- ⬜ 2.1: Remove PS2/GameCube from EmulatorSystem in `types/index.ts`
+- ⬜ 2.2: Remove EXTERNAL_SYSTEMS constant
+
+### ⬜ Step 3: Update Game Library
+
+- ⬜ 3.1: Remove PS2/GC extensions from `game-library.ts`
+- ⬜ 3.2: Remove PS2/GC folder mappings
+
+### ⬜ Step 4: Update UI Components
+
+- ⬜ 4.1: Remove PC badge from GameCard
+- ⬜ 4.2: Update/remove Settings page
+
+### ⬜ Step 5: Update Play Page
+
+- ⬜ 5.1: Remove external emulator launch logic
+
+### ⬜ Step 6: Update Documentation
+
+- ⬜ 6.1: Update root README.md
+- ⬜ 6.2: Update server README.md
+- ⬜ 6.3: Update copilot-instructions.md
+- ⬜ 6.4: Create DEPLOYMENT.md
+
+### ⬜ Step 7: Add Code Comments  
+
+- ⬜ 7.1: EmulatorJS integration files
+- ⬜ 7.2: Profile system files
+- ⬜ 7.3: Save system files
+- ⬜ 7.4: Game library files
+
+### ⬜ Step 8: Update Configuration
+
+- ⬜ 8.1: Update .env.example
+- ⬜ 8.2: Create PM2 ecosystem.config.js
+
+### ⬜ Step 9: Clean Dependencies
+
+- ⬜ 9.1: Review and remove unused packages
+
+### ⬜ Step 10: Testing
+
+- ⬜ 10.1: Local testing all systems
+- ⬜ 10.2: Production build testing
+
+---
+
+## Previous Completed Phases
+
+<details>
+<summary>✅ Phase 1: Local User Profiles (Completed)</summary>
+
+Replaced Auth.js OAuth with simple local profile system (no passwords, works offline).
+
+- Created `/profiles` landing page with user tiles
+- Profile storage in `data/profiles.json`
+- Middleware enforces profile selection
+- No authentication required
+
+</details>
+
+<details>
+<summary>✅ Phase 2: Per-Profile Save Files (Completed)</summary>
+
+Namespaced save files by profile ID to prevent conflicts:
+
+- Old: `roms/{system}/saves/{game}.state`
+- New: `roms/{system}/saves/{profileId}/{game}.state`
+- Legacy save migration support
+- Both .state and .srm files are profile-specific
+
+</details>
+
+<details>
+<summary>✅ Phase 3: Save Optimization & PWA (Completed)</summary>
+
+- Event-based saves (removed poll interval)
+- Fixed PWA manifest path
+- Added PS2/GameCube desktop emulator support (now being removed in Phase 5)
+
+</details>
+
+<details>
+<summary>✅ Phase 4: PS2/GameCube Emulation Research (Completed)</summary>
+
+Researched and implemented desktop emulator integration for PS2/GameCube.
+Now being removed in favor of browser-only approach.
+
+</details>
+
+---
+
+## Future Considerations
+
+Not current priorities, but ideas for later:
+
+- **Cloudflare R2**: Optional cloud storage for ROMs (free egress)
+- **ROM Management UI**: Upload/delete via web interface
+- **Metadata**: Game covers, ratings from IGDB API
+- **Touch Controls**: Virtual gamepad for mobile PWA
 
 ## ✅ Phase 1: Local User Profiles (Completed)
 
