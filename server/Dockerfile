@@ -31,6 +31,9 @@ RUN addgroup --system --gid 1001 nodejs && \
 # Copy package files
 COPY package*.json ./
 
+# Copy setup scripts from builder so postinstall hooks work during npm ci
+COPY --from=builder /app/scripts ./scripts
+
 # Install production dependencies only
 RUN npm ci --only=production && npm cache clean --force
 
