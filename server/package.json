@@ -10,7 +10,6 @@
     "start:next": "next start",
     "lint": "eslint",
     "setup": "node scripts/setup-emulatorjs.js",
-    "postinstall": "node scripts/setup-emulatorjs.js",
     "clean": "rm -rf .next node_modules/.cache"
   },
   "dependencies": {
