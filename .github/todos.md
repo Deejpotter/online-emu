@@ -614,3 +614,74 @@ When accessing the app via LAN IP (e.g., `10.0.0.13`) instead of `localhost`:
 - **Full solution**: Use HTTPS (self-signed cert) or access via `localhost`
 
 The app will still work for most games - threading is only needed for performance-intensive cores.
+
+---
+
+## ✅ Phase 7: Coolify Automated GitHub App (Option A)
+
+**Goal**: Finish connecting `Deejpotter/online-emu` repo to Coolify using the automated GitHub App flow, create the application resource, configure envs & mounts, enable auto-deploy, and verify the app is healthy.
+
+**Why**: Automated GitHub App flow is the simplest and safest (OAuth-based), minimal secret sharing, and allows Coolify to receive webhooks and perform auto-deploys.
+
+### Step 7.1: UI - Create & Authorize GitHub App (User action)
+- ⬜ 7.1.1: Log into Coolify at `http://67.219.108.61:8000` → **Sources** → **Add** → **GitHub App (Automated)**
+- ⬜ 7.1.2: Enter **Name** (e.g., `coolify-online-emu`) and optionally an organization, click **Continue**
+- ⬜ 7.1.3: Review **Webhook endpoint** and click **Register now** (redirects to GitHub)
+- ⬜ 7.1.4: On GitHub, **Authorize** the app and **Install** it to `Deejpotter/online-emu` repository
+- ⬜ 7.1.5: Return to Coolify → **Sources** and verify your repo appears under the new GitHub App
+- ⏳ 7.1.6: Mark this step **DONE** after you confirm (I will continue automatically once you tell me it's completed)
+
+**Logic**: This requires your GitHub session and approval — Coolify will then be able to list & access your repo via the GitHub App.
+
+---
+
+### Step 7.2: UI - Create Coolify API Token (User action)
+- ⬜ 7.2.1: In Coolify UI go to **Keys & Tokens** → **API Tokens** → **Create New Token**
+- ⬜ 7.2.2: Name it `automation-deploy` and grant **Deploy** or `*` permissions temporarily
+- ⬜ 7.2.3: Copy the token **now** and paste it here in the chat (the token is shown only once)
+- ⏳ 7.2.4: Mark this step **DONE** after pasting the token
+
+**Logic**: I need this API token to make authenticated API calls to create the application resource and configure deployments.
+
+---
+
+### Step 7.3: Backend - Programmatic App Creation (I will run)
+- ⬜ 7.3.1: Use API token to list projects (GET /api/v1/projects) and select the project uuid
+- ⬜ 7.3.2: Use API to find server UUID (GET /api/v1/servers)
+- ⬜ 7.3.3: Load repositories for your GitHub App (GET /api/v1/github-apps/{id}/repositories)
+- ⬜ 7.3.4: Create application using POST /api/v1/applications/private-github-app with payload:
+  - project_uuid, server_uuid, environment_name: "production"
+  - github_app_uuid, git_repository: "Deejpotter/online-emu", git_branch: "main"
+  - build_pack: "docker-compose", base_directory: "server"
+  - docker_compose_location: "server/docker-compose.yml", ports_exposes: "3000:3000"
+  - is_auto_deploy_enabled: true
+  - envs: GAMES_DIR=/app/public/roms, DATA_DIR=/app/data, NODE_ENV=production, PORT=3000
+  - health_check: enabled, path `/api/status`, port 3000
+- ⬜ 7.3.5: Configure persistent storage mounts on the application (host `/srv/roms` → container `/app/public/roms` read-only; host `/srv/online-emu-data` → container `/app/data` rw)
+- ⬜ 7.3.6: Trigger an initial deployment (POST /api/v1/applications/{uuid}/deploy or equivalent)
+- ⬜ 7.3.7: Monitor build logs and health until status is healthy
+
+**Logic**: After you authorize the GitHub App and provide the API token, the service is ready for programmatic creation and will be able to pull the repo and deploy using your `server/docker-compose.yml`.
+
+---
+
+### Step 7.4: Verification & Testing (Joint)
+- ⬜ 7.4.1: Verify deployment succeeded and service is reachable (http://67.219.108.61:3000 or custom domain)
+- ⬜ 7.4.2: Confirm ROM scan shows 736 NES games
+- ⬜ 7.4.3: Start a game and verify gameplay, save state, and SRM save persistence
+- ⬜ 7.4.4: Enable Auto Deploy on the Coolify app and test by pushing a small commit
+
+---
+
+### Step 7.5: Cleanup & Security
+- ⬜ 7.5.1: After setup, rotate or restrict the API token as you prefer
+- ⬜ 7.5.2: Add `/srv/roms` to backups or schedule snapshots on Vultr
+- ⬜ 7.5.3: Restrict Coolify UI port (8000) to your IP via UFW
+
+---
+
+Notes:
+- I cannot create the GitHub App for you via API without the OAuth step in the UI (this requires your GitHub browser session). Please complete Steps 7.1.1–7.1.5, then provide the API token from Step 7.2 and I will finish the rest automatically.
+
+---
+
