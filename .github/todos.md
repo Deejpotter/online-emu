@@ -1,15 +1,17 @@
 # Online Emulator - Development TODOs
 
-## Current Phase: Simplify for Vultr Deployment
+## Current Phase: Simple Vultr Deployment
 
-**Goal**: Remove PS2/GameCube external emulator support and optimize for browser-only emulation on a Vultr VPS with local ROM storage.
+**Goal**: Deploy the working online-emu app to Vultr VPS with direct Node.js + PM2 (no Docker/Coolify).
 
 **Why**:
 
-- Browser-based systems (NES through N64) work perfectly in EmulatorJS
-- PS2/GameCube require desktop emulators (PCSX2/Dolphin) which don't make sense for a web-hosted server
-- Simplifies codebase and deployment
-- Vultr Standard plan ($12/mo) provides 80GB storage - plenty for retro console ROMs
+- Current local version works perfectly (profiles, saves, EmulatorJS integration)
+- Keep deployment simple and maintainable
+- Vultr Standard plan ($12/mo): 80GB storage, 4GB RAM - ideal for retro games
+- Direct Node.js deployment easier to debug and update than containers
+
+**Note**: Docker/Coolify work archived in branch `archive/coolify-docker-attempt` for future reference.
 
 ---
 
@@ -22,62 +24,83 @@
 
 ---
 
-## 📋 Phase 5: Remove External Emulator Support & Simplify (IN PROGRESS)
+## 📋 Vultr Deployment Plan
 
-### 🔄 Step 1: Remove External Emulator Code
+### ⬜ Step 1: Server Setup
 
-- ⬜ 1.1: Delete `server/src/lib/emulator-config.ts`
-- ⬜ 1.2: Delete `server/src/lib/emulator-launcher.ts`
-- ⬜ 1.3: Delete `server/src/app/api/config/` directory
-- ⬜ 1.4: Delete `server/src/app/api/launch/` directory
-- ⬜ 1.5: Update `server/src/lib/index.ts` exports
+- ⬜ 1.1: SSH to Vultr server (`ssh root@67.219.108.61`)
+- ⬜ 1.2: Update system packages (`apt update && apt upgrade -y`)
+- ⬜ 1.3: Install Node.js 20 via nvm
+  ```bash
+  curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+  source ~/.bashrc
+  nvm install 20
+  nvm use 20
+  ```
+- ⬜ 1.4: Install PM2 globally (`npm install -g pm2`)
+- ⬜ 1.5: Install git (`apt install git -y`)
 
-### ⬜ Step 2: Update Type Definitions
+### ⬜ Step 2: Clone Repository
 
-- ⬜ 2.1: Remove PS2/GameCube from EmulatorSystem in `types/index.ts`
-- ⬜ 2.2: Remove EXTERNAL_SYSTEMS constant
+- ⬜ 2.1: Clone repo to `/opt/online-emu`
+  ```bash
+  cd /opt
+  git clone https://github.com/Deejpotter/online-emu.git
+  cd online-emu/server
+  ```
+- ⬜ 2.2: Install dependencies (`npm install`)
+- ⬜ 2.3: Build production bundle (`npm run build`)
 
-### ⬜ Step 3: Update Game Library
+### ⬜ Step 3: Upload ROM Files
 
-- ⬜ 3.1: Remove PS2/GC extensions from `game-library.ts`
-- ⬜ 3.2: Remove PS2/GC folder mappings
+- ⬜ 3.1: Create ROM directories on server (or use existing `/srv/roms`)
+- ⬜ 3.2: Upload ROMs from local PC via SCP
+  ```bash
+  # Example: Upload NES ROMs from Windows PC
+  scp -r "H:/Games/NES/ROMs/." root@67.219.108.61:/opt/online-emu/server/public/roms/nes/
+  ```
+- ⬜ 3.3: Verify ROM files accessible
 
-### ⬜ Step 4: Update UI Components
+### ⬜ Step 4: Configure Environment
 
-- ⬜ 4.1: Remove PC badge from GameCard
-- ⬜ 4.2: Update/remove Settings page
+- ⬜ 4.1: Create `.env` file (if needed for any production configs)
+- ⬜ 4.2: Verify `ecosystem.config.js` settings (already exists)
+- ⬜ 4.3: Set proper file permissions
 
-### ⬜ Step 5: Update Play Page
+### ⬜ Step 5: Start with PM2
 
-- ⬜ 5.1: Remove external emulator launch logic
+- ⬜ 5.1: Start app (`pm2 start ecosystem.config.js`)
+- ⬜ 5.2: Save PM2 process list (`pm2 save`)
+- ⬜ 5.3: Enable auto-start on boot (`pm2 startup`)
+- ⬜ 5.4: Test app at `http://67.219.108.61:3000`
 
-### ⬜ Step 6: Update Documentation
+### ⬜ Step 6: Firewall Configuration
 
-- ⬜ 6.1: Update root README.md
-- ⬜ 6.2: Update server README.md
-- ⬜ 6.3: Update copilot-instructions.md
-- ⬜ 6.4: Create DEPLOYMENT.md
+- ⬜ 6.1: Install UFW (`apt install ufw -y`)
+- ⬜ 6.2: Allow SSH (`ufw allow 22/tcp`)
+- ⬜ 6.3: Allow port 3000 (`ufw allow 3000/tcp`)
+- ⬜ 6.4: Enable firewall (`ufw enable`)
 
-### ⬜ Step 7: Add Code Comments  
+### ⬜ Step 7: Optional - Nginx Reverse Proxy
 
-- ⬜ 7.1: EmulatorJS integration files
-- ⬜ 7.2: Profile system files
-- ⬜ 7.3: Save system files
-- ⬜ 7.4: Game library files
+- ⬜ 7.1: Install Nginx (`apt install nginx -y`)
+- ⬜ 7.2: Configure proxy to port 3000
+- ⬜ 7.3: Install Certbot for SSL (`apt install certbot python3-certbot-nginx -y`)
+- ⬜ 7.4: Get SSL certificate (if using custom domain)
 
-### ⬜ Step 8: Update Configuration
+### ⬜ Step 8: Testing & Verification
 
-- ⬜ 8.1: Update .env.example
-- ⬜ 8.2: Create PM2 ecosystem.config.js
+- ⬜ 8.1: Test profile creation
+- ⬜ 8.2: Test game loading (multiple systems)
+- ⬜ 8.3: Test save states
+- ⬜ 8.4: Test SRM saves (in-game saves)
+- ⬜ 8.5: Verify PWA installable on mobile
 
-### ⬜ Step 9: Clean Dependencies
+### ⬜ Step 9: Monitoring & Maintenance
 
-- ⬜ 9.1: Review and remove unused packages
-
-### ⬜ Step 10: Testing
-
-- ⬜ 10.1: Local testing all systems
-- ⬜ 10.2: Production build testing
+- ⬜ 9.1: Set up log rotation for PM2 logs
+- ⬜ 9.2: Configure PM2 monitoring (`pm2 monit`)
+- ⬜ 9.3: Document update procedure (git pull, rebuild, pm2 restart)
 
 ---
 
