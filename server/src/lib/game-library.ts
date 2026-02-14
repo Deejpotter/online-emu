@@ -45,7 +45,7 @@ const SYSTEM_EXTENSIONS: Record<EmulatorSystem, string[]> = {
 	segaGG: [".gg", ".zip"],
 	segaCD: [".iso", ".bin", ".cue", ".zip"],
 	psx: [".bin", ".iso", ".cue", ".img", ".zip", ".pbp"],
-	psp: [".iso", ".cso", ".zip", ".pbp"],
+	psp: [".iso", ".cso", ".zip", ".pbp", ".7z"],
 	atari2600: [".a26", ".bin", ".zip"],
 	arcade: [".zip"],
 };
