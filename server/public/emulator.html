@@ -560,6 +560,13 @@
         window.EJS_core = core;
         window.EJS_pathtodata = '/emulatorjs/data/';
 
+        // Enable threads for cores that require them (e.g. PPSSPP, DOSBox)
+        // EmulatorJS will still verify SharedArrayBuffer is exposed and will
+        // show a clear error if COEP/COOP headers are missing.
+        const THREADING_CORES = ['psp', 'dosbox_pure'];
+        window.EJS_threads = THREADING_CORES.includes(core);
+        console.log('[EmulatorJS] Threads enabled:', window.EJS_threads);
+
         // CRITICAL: EJS_gameName is used as the identifier for save files in IndexedDB!
         // Without this, saves may not persist correctly between sessions.
         // Extract game name from URL (remove path and extension)
