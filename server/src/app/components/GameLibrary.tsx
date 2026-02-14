@@ -647,7 +647,7 @@ export function GameLibrary({ onSelectGame }: GameLibraryProps) {
 
 																{/* Game info */}
 																<div className="flex-1 min-w-0">
-																	<div className="font-semibold text-base text-white truncate">
+																	<div className="font-semibold text-sm md:text-base text-white truncate">
 																		{game.title}
 																	</div>
 																	<div className="flex items-center gap-2 mt-0.5">
@@ -704,7 +704,7 @@ export function GameLibrary({ onSelectGame }: GameLibraryProps) {
 
 												{/* Game info */}
 												<div className="flex-1 min-w-0">
-													<div className="font-semibold text-base text-white truncate">
+													<div className="font-semibold text-sm md:text-base text-white truncate">
 														{game.title}
 													</div>
 													<div className="flex items-center gap-2 mt-0.5">

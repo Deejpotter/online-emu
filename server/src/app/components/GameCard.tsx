@@ -129,7 +129,7 @@ export function GameCard({ game, onSelect }: GameCardProps) {
 			{/* Game Info */}
 			<div className="p-4">
 				<h3
-					className="font-bold text-xl truncate mb-1.5 text-white"
+					className="font-semibold text-sm md:text-base leading-snug mb-1.5 text-white line-clamp-3"
 					style={{ textShadow: "0 1px 3px rgba(0,0,0,0.8)" }}
 				>
 					{game.title}
