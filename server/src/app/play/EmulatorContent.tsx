@@ -358,6 +358,50 @@ export function EmulatorContent() {
 		);
 	}
 
+	// Helpful check: some EmulatorJS cores (PSP / DOSBox) require WebAssembly threads
+	// which depend on SharedArrayBuffer being exposed by the browser. That only
+	// works on secure contexts (localhost or HTTPS with COEP/COOP headers).
+	const THREADING_SYSTEMS = new Set<EmulatorSystem>(["psp", "dosbox"]);
+	const requiresThreads = game && THREADING_SYSTEMS.has(game.system);
+	const hasSharedArrayBuffer = typeof window !== "undefined" &&
+		typeof (window as any).SharedArrayBuffer !== "undefined";
+
+	if (requiresThreads && !hasSharedArrayBuffer) {
+		return (
+			<div className="min-h-screen bg-zinc-950 flex items-center justify-center p-6">
+				<div className="max-w-2xl bg-zinc-900/60 border border-zinc-800 rounded-xl p-6 text-center">
+					<h2 className="text-lg font-bold mb-2">Cannot run this game on this origin</h2>
+					<p className="text-sm text-zinc-400 mb-4">
+						The selected game (PSP/DOS) requires WebAssembly threads (SharedArrayBuffer),
+						which aren't available on this origin. Threads require a secure context
+						(localhost or HTTPS with COEP/COOP headers).
+					</p>
+					<div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+						<a
+							href={`http://localhost:3000/play?id=${game.id}`}
+							className="px-4 py-2 bg-blue-600 text-white rounded-md shadow-sm"
+						>
+							Open on localhost
+						</a>
+						<button
+							onClick={() => {
+								navigator.clipboard?.writeText(`http://localhost:3000/play?id=${game.id}`);
+								showToast("Local URL copied to clipboard", "info");
+							}}
+							className="px-4 py-2 border rounded-md text-sm"
+						>
+							Copy localhost URL
+						</button>
+					</div>
+					<p className="mt-4 text-xs text-zinc-500">
+						To play from another device you'll need HTTPS + COEP/COOP (use a domain
+						with an SSL certificate). See the deployment docs for instructions.
+					</p>
+				</div>
+			</div>
+		);
+	}
+
 	return (
 		<div className="fixed inset-0 bg-zinc-950 flex flex-col">
 			{/* Collapsible Header - tap to toggle on mobile */}
