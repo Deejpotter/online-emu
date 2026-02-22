@@ -1,19 +1,33 @@
 /**
- * Emulator Page Content
+ * Emulator Page Content — DESIGN RATIONALE
  *
- * Hosts EmulatorJS in an iframe to isolate it from React's DOM.
- * This is REQUIRED because EmulatorJS manipulates the DOM directly,
- * which conflicts with React's virtual DOM.
+ * Purpose: host EmulatorJS in a safe, isolated environment while keeping a
+ * React-based UI for library, controls and save management.
  *
- * From EmulatorJS docs:
- * "To embed within React or a SPA, the only way is to embed an iframe
- *  into your page. You cannot run it directly on the page."
+ * Why an iframe (not embedding directly):
+ * - EmulatorJS directly manipulates the DOM and uses WebAssembly cores that
+ *   assume sole control of their canvas and runtime. Embedding it directly
+ *   in React breaks reconciliation and causes subtle runtime bugs.
+ * - Isolation via an iframe preserves React's virtual DOM invariants while
+ *   allowing the emulator to run at native speed in-browser.
  *
- * Why iframe isolation: EmulatorJS tampers with the global window object
- * and manipulates the DOM tree, which breaks React's virtual DOM reconciliation.
- * Running it in an iframe provides a separate context where this is safe.
+ * Communication pattern (robust and explicit):
+ * - `postMessage` used for all parent↔iframe interactions to avoid coupling.
+ * - Messages are small, event-driven and authoritative (e.g. emulator "save"
+ *   events trigger immediate server uploads). This avoids polling and race
+ *   conditions.
  *
- * Communication with the iframe happens via postMessage API.
+ * UX choices explained:
+ * - Event-driven saves: SRM and manual save-states are uploaded immediately on
+ *   emulator events. This gives deterministic feedback to users and removes
+ *   the uncertainty associated with periodic polling.
+ * - Joystick-first input mapping: left-analog mapped to D‑pad by default to
+ *   support common controllers where D‑pad may be unreliable — improves UX
+ *   across real devices.
+ *
+ * Security & threading note:
+ * - Some cores (PSP) require SharedArrayBuffer and COEP/COOP headers; the
+ *   component explicitly checks availability and shows actionable guidance.
  */
 
 "use client";
@@ -79,6 +93,8 @@ type EmulatorIncomingMessage =
 	| EmulatorStateMessage
 	| { type: "stateSaved" }
 	| { type: "stateLoaded" }
+	| { type: "srmSaveStarted" }
+	| { type: "srmSaveComplete"; success?: boolean }
 	| { type: "canvasInfo"; width: number; height: number };
 
 /**
@@ -200,6 +216,21 @@ export function EmulatorContent() {
 				case "stateLoaded":
 					console.log("[Emulator] State loaded");
 					showToast("Game loaded!", "success");
+					break;
+
+				case "srmSaveComplete":
+					console.log("[Emulator] SRM save complete", data);
+					if ((data as any)?.success) {
+						showToast("In-game save uploaded to server", "success");
+					} else {
+						showToast("Failed to upload in-game save", "error");
+					}
+					break;
+
+				case "srmSaveStarted":
+					// ephemeral indicator that the iframe has started uploading SRM
+					console.log("[Emulator] SRM save started", data);
+					showToast("Saving in-game save...", "info");
 					break;
 			}
 		},
@@ -358,23 +389,27 @@ export function EmulatorContent() {
 		);
 	}
 
-	// Helpful check: some EmulatorJS cores (PSP / DOSBox) require WebAssembly threads
+	// Helpful check: some EmulatorJS cores (PSP) require WebAssembly threads
 	// which depend on SharedArrayBuffer being exposed by the browser. That only
 	// works on secure contexts (localhost or HTTPS with COEP/COOP headers).
-	const THREADING_SYSTEMS = new Set<EmulatorSystem>(["psp", "dosbox"]);
+	const THREADING_SYSTEMS = new Set<EmulatorSystem>(["psp"]);
 	const requiresThreads = game && THREADING_SYSTEMS.has(game.system);
-	const hasSharedArrayBuffer = typeof window !== "undefined" &&
+	const hasSharedArrayBuffer =
+		typeof window !== "undefined" &&
 		typeof (window as any).SharedArrayBuffer !== "undefined";
 
 	if (requiresThreads && !hasSharedArrayBuffer) {
 		return (
 			<div className="min-h-screen bg-zinc-950 flex items-center justify-center p-6">
 				<div className="max-w-2xl bg-zinc-900/60 border border-zinc-800 rounded-xl p-6 text-center">
-					<h2 className="text-lg font-bold mb-2">Cannot run this game on this origin</h2>
+					<h2 className="text-lg font-bold mb-2">
+						Cannot run this game on this origin
+					</h2>
 					<p className="text-sm text-zinc-400 mb-4">
-						The selected game (PSP/DOS) requires WebAssembly threads (SharedArrayBuffer),
-						which aren't available on this origin. Threads require a secure context
-						(localhost or HTTPS with COEP/COOP headers).
+						The selected game (PSP/DOS) requires WebAssembly threads
+						(SharedArrayBuffer), which aren't available on this origin. Threads
+						require a secure context (localhost or HTTPS with COEP/COOP
+						headers).
 					</p>
 					<div className="flex flex-col sm:flex-row items-center justify-center gap-3">
 						<a
@@ -385,7 +420,9 @@ export function EmulatorContent() {
 						</a>
 						<button
 							onClick={() => {
-								navigator.clipboard?.writeText(`http://localhost:3000/play?id=${game.id}`);
+								navigator.clipboard?.writeText(
+									`http://localhost:3000/play?id=${game.id}`
+								);
 								showToast("Local URL copied to clipboard", "info");
 							}}
 							className="px-4 py-2 border rounded-md text-sm"
@@ -394,8 +431,9 @@ export function EmulatorContent() {
 						</button>
 					</div>
 					<p className="mt-4 text-xs text-zinc-500">
-						To play from another device you'll need HTTPS + COEP/COOP (use a domain
-						with an SSL certificate). See the deployment docs for instructions.
+						To play from another device you'll need HTTPS + COEP/COOP (use a
+						domain with an SSL certificate). See the deployment docs for
+						instructions.
 					</p>
 				</div>
 			</div>

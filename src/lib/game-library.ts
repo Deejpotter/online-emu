@@ -200,7 +200,7 @@ export const getGame = getGameById;
  * Convert a filename to a display title.
  * Removes extension, replaces underscores/hyphens with spaces, and title-cases.
  */
-function filenameToTitle(filename: string): string {
+export function filenameToTitle(filename: string): string {
 	// Remove extension
 	const name = filename.replace(/\.[^/.]+$/, "");
 

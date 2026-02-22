@@ -26,28 +26,69 @@
 
 ## 📋 Vultr Deployment Plan
 
+## 📦 Server Folder → Root Migration
+
+**Goal**: Move the Next.js app currently under `server/` to the repository root while preserving data and developer workflows.
+
+### ✅ Step 1: Inventory + conflict check
+
+- ✅ 1.1: List root vs `server/` top-level files to identify conflicts (README, data, node_modules, .env)
+- ✅ 1.2: Scan for references to `server/` paths in docs, scripts, and code
+- ✅ 1.3: Confirm which artifacts should NOT move (node_modules, .next, coverage)
+
+### ✅ Step 2: Move core app files to root
+
+- ✅ 2.1: Move `server/src` → `src/`
+- ✅ 2.2: Move `server/public` → `public/`
+- ✅ 2.3: Move `server/scripts` → `scripts/`
+- ✅ 2.4: Move `server/server.ts` → `server.ts`
+- ✅ 2.5: Move config files (`next.config.ts`, `tsconfig.json`, `eslint.config.mjs`, `postcss.config.mjs`, `next-env.d.ts`)
+- ✅ 2.6: Move testing config (`jest.config.cjs`, `jest.env.js`, `jest.setup.ts`)
+- ✅ 2.7: Move runtime config (`ecosystem.config.js`, `.env.example`) and `package.json`/lockfile
+
+### ✅ Step 3: Resolve conflicts and preserve data
+
+- ✅ 3.1: Compare `data/` in root vs `server/data/`; keep the newest or merge
+- ✅ 3.2: Merge `server/README.md` content into root `README.md` and remove `server/README.md`
+- ✅ 3.3: Ensure `.env` stays at root and no secrets are overwritten
+
+### ✅ Step 4: Update references after move
+
+- ✅ 4.1: Update docs that mention `cd server` or `server/` paths
+- ✅ 4.2: Update scripts/log messages that reference `server` pathing
+- ✅ 4.3: Verify config paths (turbopack root, ROM paths, data paths) still resolve correctly
+
+### ✅ Step 5: Cleanup + verification
+
+- ✅ 5.1: Remove leftover `server/` directory artifacts (if any) after move
+- ✅ 5.2: Run lint/test/build if requested; otherwise spot-check for obvious path issues
+
 ### ⬜ Step 1: Server Setup
 
 - ⬜ 1.1: SSH to Vultr server (`ssh root@67.219.108.61`)
 - ⬜ 1.2: Update system packages (`apt update && apt upgrade -y`)
 - ⬜ 1.3: Install Node.js 20 via nvm
+
   ```bash
   curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
   source ~/.bashrc
   nvm install 20
   nvm use 20
   ```
+
 - ⬜ 1.4: Install PM2 globally (`npm install -g pm2`)
 - ⬜ 1.5: Install git (`apt install git -y`)
 
 ### ⬜ Step 2: Clone Repository
 
 - ⬜ 2.1: Clone repo to `/opt/online-emu`
+
   ```bash
   cd /opt
   git clone https://github.com/Deejpotter/online-emu.git
-  cd online-emu/server
+  cd online-emu
   ```
+
 - ⬜ 2.2: Install dependencies (`npm install`)
 - ⬜ 2.3: Build production bundle (`npm run build`)
 
@@ -55,10 +96,12 @@
 
 - ⬜ 3.1: Create ROM directories on server (or use existing `/srv/roms`)
 - ⬜ 3.2: Upload ROMs from local PC via SCP
+
   ```bash
   # Example: Upload NES ROMs from Windows PC
-  scp -r "H:/Games/NES/ROMs/." root@67.219.108.61:/opt/online-emu/server/public/roms/nes/
+  scp -r "H:/Games/NES/ROMs/." root@67.219.108.61:/opt/online-emu/public/roms/nes/
   ```
+
 - ⬜ 3.3: Verify ROM files accessible
 
 ### ⬜ Step 4: Configure Environment
@@ -149,16 +192,125 @@ Now being removed in favor of browser-only approach.
 
 ---
 
-## Future Considerations
+## Event-based saves (replace debounce/polling with event-driven flow)
 
-Not current priorities, but ideas for later:
+**Goal**: Remove any visible "waiting/polling" behavior when the user saves. All server saves (SRM & save-states) must be triggered immediately by EmulatorJS events that indicate the virtual save file was written — and the UI must show instant, accurate feedback.
 
-- **Cloudflare R2**: Optional cloud storage for ROMs (free egress)
-- **ROM Management UI**: Upload/delete via web interface
-- **Metadata**: Game covers, ratings from IGDB API
-- **Touch Controls**: Virtual gamepad for mobile PWA
+Why: Users expect "Save" to persist immediately. Debounce/polling introduces delay and uncertainty ("it waits a bit"). Event-driven saves improve UX and reduce wasted network traffic.
+
+### High-level plan (all steps)
+
+1. Design: audit current save flow and identify polling/debounce paths ✅
+2. Client change: make SRM save immediate on EJS_onSaveUpdate (event-driven) ✅
+3. Client change: ensure Save State (manual) writes to server immediately (already updated) ✅
+4. UI: emit and handle explicit save-started / save-complete events between iframe ↔ parent; show in-app toasts ✅
+5. Fallbacks: retain debounced backup saves for visibility/blur but mark them as secondary ✅
+6. Docs & tests: document behavior and add manual verification checklist ✅
+
+---
+
+### Detailed steps, logic, and sub-steps
+
+Step 1 — Audit current flow (logic)
+
+- Logic: Confirm where saves are initiated (EJS callbacks), whether saves are debounced, and what network calls reach the server.
+- Sub-steps:
+  - Read `emulator.html` to find `EJS_onSaveUpdate` and `EJS_onSaveState` ✅
+  - Confirm `debouncedSrmSave()` and `debouncedSaveToServer()` behavior ✅
+  - Confirm server API `/api/srm` and `/api/saves` write files synchronously ✅
+
+Step 2 — Immediate SRM save on actual file write (logic)
+
+- Logic: `EJS_onSaveUpdate` is fired by EmulatorJS when the game writes SRM to the virtual FS — treat that as the authoritative save event and upload immediately.
+- Sub-steps:
+  - Replace `debouncedSrmSave()` call with an immediate `await saveSrmToServer()` call ✅
+  - Show `SAVING...` / `SRM SAVED TO SERVER` messages inside the iframe ✅
+  - Send parent messages `srmSaveStarted` and `srmSaveComplete` for UI feedback ✅
+
+Step 3 — Immediate save-state (manual) → server (logic)
+
+- Logic: Manual save-state reflects explicit user intent — persist immediately.
+- Sub-steps:
+  - Ensure `EJS_onSaveState` calls `saveToServer(0)` immediately and shows UI messages ✅
+  - Parent page receives `stateSaved` and shows toast (existing) ✅
+
+Step 4 — Parent UI feedback & reliability (logic)
+
+- Logic: Parent app should show clear status for start/success/failure so user knows progress persisted.
+- Sub-steps:
+  - Add `srmSaveStarted` and `srmSaveComplete` handling in `EmulatorContent.tsx` → toast on each event ✅
+  - Keep `stateSaved` / `stateLoaded` handling as-is ✅
+
+Step 5 — Keep safe fallbacks & cleanup (logic)
+
+- Logic: Retain non-blocking backups for visibility change/tabhide (still event-driven) but remove user-facing polling/delay.
+- Sub-steps:
+  - Keep `debouncedSrmSave()` for backup triggers (visibilitychange, blur) but not as primary save path ✅
+  - Document that debounced backups are fallback only ✅
+
+Step 6 — Docs, tests & verification (logic)
+
+- Logic: Update docs so behavior is clear and add manual verification steps the user can run.
+- Sub-steps:
+  - Update server README + in-file comments describing event-based saves ✅
+  - Add manual verification checklist (play → in-game save → reload → confirm) ✅
+  - Optional: add integration test later if requested ⬜ (not required now)
+
+---
+
+### Implementation status (live tasks)
+
+- 🔄 Design & audit — Completed ✅
+- ✅ Implement immediate SRM save on EJS_onSaveUpdate — Completed ✅
+- ✅ Implement immediate Save State → server — Completed ✅
+- ✅ Add `srmSaveStarted` + `srmSaveComplete` messages + parent toast — Completed ✅
+- ✅ Keep debounced backup for visibility/blur (non-user-facing) — Kept as fallback ✅
+- ✅ Update docs & todos with verification steps — Completed ✅
+
+---
+
+## Manual verification checklist (do this after deploy)
+
+- Play a game with in-game save (SRM), trigger Save inside the game.
+- Watch emulator UI: should show `SAVING...` then `SRM SAVED TO SERVER`.
+- Parent page should display a toast `Saving in-game save...` and then `In-game save uploaded to server`.
+- Reload the page and confirm the game's in-game save was restored.
+- Use `/api/srm/{gameId}?system={system}` to verify the SRM file exists on the server.
+
+---
 
 ## ✅ Phase 1: Local User Profiles (Completed)
+
+---
+
+## ⬜ Testing: Expand automated test coverage (NEW)
+
+Goal: Increase unit and integration coverage for critical flows (SRM, save-states, emulator iframe behavior, and game-library helpers). Add edge-case tests and CI job to run on PRs.
+
+Priority: High — makes save behavior and iframe edge-cases robust and prevents regressions.
+
+Tasks:
+
+- ⬜ Add SRM API edge tests (missing params, empty body, path traversal, legacy save header)
+- ⬜ Add save-state API edge tests (empty body, missing system, path traversal, legacy save header, delete-not-found)
+- ⬜ Add `EmulatorContent` component tests (fetch-success → iframe src, threading-warning for PSP, API error handling)
+- ⬜ Add `game-library` helper tests (markGameAsPlayed, updateGame behavior)
+- ⬜ Add CI workflow to run `yarn test` on PRs
+- ⬜ Run tests locally and fix failures until green
+
+Acceptance criteria:
+
+1. New test suites added and committed.
+2. All tests pass locally and in CI.
+3. Coverage added for the save APIs and iframe behavior.
+
+Verification steps:
+
+- Run `yarn test` (all suites pass)
+- Confirm new tests appear in test summary
+- Confirm no regressions in existing suites
+
+---
 
 ### Summary
 

@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // third‑party assets and minified code
+    "public/**/*.min.js",
+    "public/emulatorjs/**",
   ]),
 ]);
 

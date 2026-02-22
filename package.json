@@ -5,9 +5,13 @@
   "scripts": {
     "predev": "node -e \"try{require('fs').rmSync('.next/dev/lock',{force:true})}catch{}\"",
     "dev": "npx tsx watch server.ts",
+    "dev:next": "next dev -p 3000",
+    "dev:fast": "yarn dev:next",
     "build": "next build",
     "start": "NODE_ENV=production npx tsx server.ts",
     "start:next": "next start",
+    "test": "jest --passWithNoTests --runInBand",
+    "test:watch": "jest --watch",
     "lint": "eslint",
     "setup": "node scripts/setup-emulatorjs.js",
     "postinstall": "node scripts/setup-emulatorjs.js",
@@ -29,6 +33,13 @@
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4.1.18",
     "tsx": "^4.21.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.0",
+    "@types/jest": "^29.5.3",
+    "@testing-library/react": "^14.0.0",
+    "@testing-library/jest-dom": "^6.0.0",
+    "@testing-library/user-event": "^14.4.3",
+    "jest-environment-jsdom": "^29.5.0"
   }
 }

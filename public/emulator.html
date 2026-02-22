@@ -789,20 +789,49 @@
 
         checkIndexedDBSaves();
 
-        // Save update callback - triggers SRM save to server when game saves internally
-        // This replaces the 30-second interval with event-based saves
-        window.EJS_onSaveUpdate = function (saveData) {
-            console.log('[EmulatorJS] 💾 Save data updated - triggering server save:', {
+        // Save update callback - fires when the game writes in-game save data (SRM)
+        // This is the SOURCE-OF-TRUTH event: when EmulatorJS notifies that the game
+        // has written SRM data, we should save it to the server immediately.
+        window.EJS_onSaveUpdate = async function (saveData) {
+            console.log('[EmulatorJS] 💾 Save data updated - SRM event:', {
                 hash: saveData.hash,
                 format: saveData.format
             });
-            sendToParent({
-                type: 'saveUpdated',
-                hash: saveData.hash
-            });
 
-            // Trigger debounced SRM save to server
-            debouncedSrmSave();
+            // Notify parent that an internal save occurred (UI may react)
+            sendToParent({ type: 'saveUpdated', hash: saveData.hash });
+
+            // Immediate server save on SRM write (user expects persistence now)
+            try {
+                const ejs = window.EJS_emulator;
+                if (ejs && typeof ejs.displayMessage === 'function') {
+                    ejs.displayMessage('SAVING...');
+                }
+
+                // Let parent UI show a 'saving' indicator immediately
+                sendToParent({ type: 'srmSaveStarted', hash: saveData.hash });
+
+                const saved = await saveSrmToServer();
+                if (saved) {
+                    if (ejs && typeof ejs.displayMessage === 'function') {
+                        ejs.displayMessage('SRM SAVED TO SERVER');
+                    }
+                    sendToParent({ type: 'srmSaveComplete', success: true, hash: saveData.hash });
+                } else {
+                    if (ejs && typeof ejs.displayMessage === 'function') {
+                        ejs.displayMessage('SRM SAVE FAILED');
+                    }
+                    sendToParent({ type: 'srmSaveComplete', success: false, hash: saveData.hash });
+                }
+            } catch (err) {
+                console.error('[Server SRM] Immediate save failed:', err);
+                try { window.EJS_emulator.displayMessage('SRM SAVE FAILED'); } catch (e) { }
+                sendToParent({ type: 'srmSaveComplete', success: false, error: String(err) });
+            }
+
+            // Keep the debounced backup in place for non-event triggers (visibility change, etc.)
+            // but primary path is immediate event-based save.
+            // debouncedSrmSave();
         };
 
         // Ready callback - fires when EmulatorJS UI is ready (before game starts)
@@ -812,6 +841,34 @@
             // Hide our loading spinner - EmulatorJS will show its own "Start Game" button
             loadingEl.classList.add('ejs-ready');
             sendToParent({ type: 'stateChanged', state: 'ready' });
+
+            // Make left analog stick the default movement control (joystick-first)
+            // - This helps users with a broken D-pad by routing LEFT_STICK -> directional inputs
+            // - We patch the in-emulator control map at runtime and persist the setting
+            try {
+                if (window.EJS_emulator && window.EJS_emulator.controls) {
+                    const controls = window.EJS_emulator.controls;
+                    for (let player = 0; player < 4; player++) {
+                        controls[player] = controls[player] || {};
+                        controls[player][4] = controls[player][4] || {}; // UP
+                        controls[player][5] = controls[player][5] || {}; // DOWN
+                        controls[player][6] = controls[player][6] || {}; // LEFT
+                        controls[player][7] = controls[player][7] || {}; // RIGHT
+
+                        // Map directional inputs to left stick axes
+                        controls[player][4].value2 = 'LEFT_STICK_Y:-1';
+                        controls[player][5].value2 = 'LEFT_STICK_Y:+1';
+                        controls[player][6].value2 = 'LEFT_STICK_X:-1';
+                        controls[player][7].value2 = 'LEFT_STICK_X:+1';
+                    }
+                    if (typeof window.EJS_emulator.saveSettings === 'function') {
+                        window.EJS_emulator.saveSettings();
+                    }
+                    console.log('[EmulatorJS] ✅ Controls updated: LEFT_STICK is primary for movement');
+                }
+            } catch (err) {
+                console.warn('[EmulatorJS] Could not set joystick-as-default mapping:', err);
+            }
         };
 
         // Callbacks
@@ -830,6 +887,31 @@
                 height
             });
             sendToParent({ type: 'stateChanged', state: 'playing' });
+
+            // Ensure joystick-as-default mapping is applied at game start as well
+            try {
+                if (window.EJS_emulator && window.EJS_emulator.controls) {
+                    const controls = window.EJS_emulator.controls;
+                    for (let player = 0; player < 4; player++) {
+                        controls[player] = controls[player] || {};
+                        controls[player][4] = controls[player][4] || {}; // UP
+                        controls[player][5] = controls[player][5] || {}; // DOWN
+                        controls[player][6] = controls[player][6] || {}; // LEFT
+                        controls[player][7] = controls[player][7] || {}; // RIGHT
+
+                        controls[player][4].value2 = 'LEFT_STICK_Y:-1';
+                        controls[player][5].value2 = 'LEFT_STICK_Y:+1';
+                        controls[player][6].value2 = 'LEFT_STICK_X:-1';
+                        controls[player][7].value2 = 'LEFT_STICK_X:+1';
+                    }
+                    if (typeof window.EJS_emulator.saveSettings === 'function') {
+                        window.EJS_emulator.saveSettings();
+                    }
+                    console.log('[EmulatorJS] ✅ Re-applied joystick-first control mapping at game start');
+                }
+            } catch (err) {
+                console.warn('[EmulatorJS] Could not re-apply joystick mapping at game start:', err);
+            }
 
             // NOTE: No auto-save intervals anymore!
             // Saves happen via EJS_onSaveUpdate (when game saves) and EJS_onSaveState (manual save)
@@ -855,12 +937,30 @@
 
         // EmulatorJS save/load callbacks
         // Hook into EmulatorJS's built-in save system to also save to server
-        window.EJS_onSaveState = function (saveData) {
+        window.EJS_onSaveState = async function (saveData) {
             console.log('[EmulatorJS] State saved via EmulatorJS UI', saveData);
             sendToParent({ type: 'stateSaved' });
 
-            // Also save to server automatically (uses debounce)
-            debouncedSaveToServer();
+            // Manual save = user intent. Save immediately to server and show feedback.
+            try {
+                const ejs = window.EJS_emulator;
+                if (ejs && typeof ejs.displayMessage === 'function') {
+                    ejs.displayMessage('SAVING...');
+                }
+
+                const ok = await saveToServer(0);
+                if (ok) {
+                    if (ejs && typeof ejs.displayMessage === 'function') {
+                        ejs.displayMessage('STATE SAVED TO SERVER');
+                    }
+                } else {
+                    if (ejs && typeof ejs.displayMessage === 'function') {
+                        ejs.displayMessage('SAVE TO SERVER FAILED');
+                    }
+                }
+            } catch (err) {
+                console.warn('[Server Save] Immediate save failed:', err);
+            }
         };
 
         window.EJS_onLoadState = function () {

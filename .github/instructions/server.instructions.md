@@ -1,5 +1,5 @@
 ---
-applyTo: "server/**/*.ts,server/**/*.tsx"
+applyTo: "src/**/*.ts,src/**/*.tsx,server.ts"
 ---
 
 # Server Development Instructions

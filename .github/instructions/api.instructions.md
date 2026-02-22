@@ -1,5 +1,5 @@
 ---
-applyTo: "server/app/api/**/*.ts"
+applyTo: "src/app/api/**/*.ts"
 ---
 
 # API Development Instructions
