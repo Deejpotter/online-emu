@@ -40,6 +40,18 @@ const nextConfig: NextConfig = {
 					},
 				],
 			},
+			{
+				// Prevent browsers caching the localization file or emulator page.
+				// These are small static files that change during development;
+				// a stale cached empty en-US.json causes hundreds of translation warnings.
+				source: "/:path(emulator\\.html|emulatorjs/data/localization/.+)",
+				headers: [
+					{
+						key: "Cache-Control",
+						value: "no-store",
+					},
+				],
+			},
 		];
 	},
 };

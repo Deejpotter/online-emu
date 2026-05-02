@@ -38,8 +38,8 @@ export const metadata: Metadata = {
 		"Self-hosted game console emulator with mobile streaming support",
 	keywords: ["emulator", "gaming", "retro", "streaming", "remote play", "pwa"],
 	// PWA specific metadata
-	// Next.js generates manifest at /manifest.json (not .webmanifest)
-	manifest: "/manifest.json",
+	// Next.js generates manifest at /manifest.webmanifest via src/app/manifest.ts
+	manifest: "/manifest.webmanifest",
 	appleWebApp: {
 		capable: true,
 		statusBarStyle: "black-translucent",

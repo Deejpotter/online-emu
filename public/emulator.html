@@ -915,15 +915,14 @@
             }
 
             // =====================================================================
-            // AUTO-RESTORE: Load save state + SRM from server on game start
+            // AUTO-RESTORE: Load SRM + save state from server on game start
             //
-            // Order matters:
-            //   1. Load SRM first (500ms delay) — restores in-game save memory
-            //   2. Load save state second (1500ms delay) — snaps emulator to exact
-            //      position. Runs after SRM so the game's memory is populated
-            //      before the state is applied.
+            // Order:
+            //   1. SRM at 500ms — restores in-game save memory (battery save)
+            //   2. Save state polls until loadState() is callable, then fires
+            //      (starts after 1.5s to let SRM settle first)
             //
-            // Both are graceful: 404 = no previous save, game starts fresh.
+            // Both handle 404 gracefully: new game = start fresh, no error.
             // =====================================================================
 
             // Step 1: Load SRM (in-game saves) from server
@@ -933,84 +932,47 @@
                 if (loaded) {
                     console.log('[Server SRM] ✅ Restored in-game saves from server');
                 } else {
-                    // Retry once — emulator may still be initialising virtual FS
                     setTimeout(async () => {
                         const retried = await loadSrmFromServer();
                         if (retried) {
                             console.log('[Server SRM] ✅ Restored in-game saves from server (retry)');
                         } else {
-                            console.log('[Server SRM] No previous in-game saves found (normal for new games)');
+                            console.log('[Server SRM] No previous in-game saves found (new game)');
                         }
                     }, 1000);
                 }
             }, 500);
 
-        // =====================================================================
-        // AUTO-RESTORE: Load save state + SRM from server on game start
-        //
-        // Order matters:
-        //   1. Load SRM first (500ms delay) — restores in-game save memory
-        //   2. Load save state second — polls until ejs.gameManager.functions.loadState
-        //      is actually callable (not a fixed delay), then applies state.
-        //      Runs after SRM so the game's memory is populated first.
-        //
-        // Both are graceful: 404 = no previous save, game starts fresh.
-        // =====================================================================
+            // Step 2: Auto-load save state — poll until core is ready
+            (async function attemptAutoLoad() {
+                const INITIAL_WAIT_MS  = 1500;
+                const POLL_INTERVAL_MS = 300;
+                const MAX_WAIT_MS      = 15000;
 
-        // Step 1: Load SRM (in-game saves) from server
-        setTimeout(async () => {
-            console.log('[Server SRM] Loading in-game saves from server...');
-            const loaded = await loadSrmFromServer();
-            if (loaded) {
-                console.log('[Server SRM] ✅ Restored in-game saves from server');
-            } else {
-                // Retry once — emulator may still be initialising virtual FS
-                setTimeout(async () => {
-                    const retried = await loadSrmFromServer();
-                    if (retried) {
-                        console.log('[Server SRM] ✅ Restored in-game saves from server (retry)');
-                    } else {
-                        console.log('[Server SRM] No previous in-game saves found (normal for new games)');
-                    }
-                }, 1000);
-            }
-        }, 500);
+                await new Promise(r => setTimeout(r, INITIAL_WAIT_MS));
 
-        // Step 2: Auto-load save state from server
-        // Poll until ejs.gameManager.functions.loadState is actually available
-        // rather than using a fixed delay that can be too early on some systems.
-        // Starts polling after an initial 1.5s to let SRM load settle first.
-        (async function attemptAutoLoad() {
-            const INITIAL_WAIT_MS  = 1500;  // Let SRM load first
-            const POLL_INTERVAL_MS = 300;   // Check every 300ms
-            const MAX_WAIT_MS      = 15000; // Give up after 15s total
+                let elapsed = 0;
+                while (elapsed < MAX_WAIT_MS) {
+                    const ejs = window.EJS_emulator;
+                    if (ejs && ejs.gameManager &&
+                        ejs.gameManager.functions &&
+                        typeof ejs.gameManager.functions.loadState === 'function') {
 
-            await new Promise(r => setTimeout(r, INITIAL_WAIT_MS));
-
-            let elapsed = 0;
-            while (elapsed < MAX_WAIT_MS) {
-                const ejs = window.EJS_emulator;
-                if (ejs && ejs.gameManager &&
-                    ejs.gameManager.functions &&
-                    typeof ejs.gameManager.functions.loadState === 'function') {
-
-                    console.log('[Server Save] ⏱️ Core ready, auto-loading save state from server...');
-                    const loaded = await loadFromServer(0);
-                    if (loaded) {
-                        console.log('[Server Save] ✅ Auto-load successful');
-                        if (typeof ejs.displayMessage === 'function') {
-                            ejs.displayMessage('SAVE RESTORED');
+                        console.log('[Server Save] ⏱️ Core ready, auto-loading save state...');
+                        const loaded = await loadFromServer(0);
+                        if (loaded) {
+                            console.log('[Server Save] ✅ Auto-load successful');
+                            if (typeof ejs.displayMessage === 'function') ejs.displayMessage('SAVE RESTORED');
+                        } else {
+                            console.log('[Server Save] No previous save state found (new game)');
                         }
-                    } else {
-                        console.log('[Server Save] No previous save state found (new game or first play)');
+                        return;
                     }
-                    return;
+                    await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
+                    elapsed += POLL_INTERVAL_MS;
                 }
-                await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
-                elapsed += POLL_INTERVAL_MS;
-            }
-            console.warn('[Server Save] ⚠️ Timed out waiting for emulator to be ready for auto-load');
-        })();
+                console.warn('[Server Save] ⚠️ Timed out waiting for core to be ready for auto-load');
+            })();
 
             // =====================================================================
             // AUTO-SAVE: Save state to server every 60 seconds silently
