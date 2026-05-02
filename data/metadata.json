@@ -23542,7 +23542,8 @@
       "system": "gba",
       "romPath": "GBA\\ROMs\\pokemonfire_red_version.zip",
       "fileSize": 5317127,
-      "playCount": 0
+      "playCount": 2,
+      "lastPlayed": "2026-05-02T06:51:43.917Z"
     },
     {
       "id": "a743df62-e525-4f32-953e-31e804daffc2",
@@ -60721,5 +60722,5 @@
       "playCount": 0
     }
   ],
-  "lastUpdated": "2026-05-02T05:57:40.547Z"
+  "lastUpdated": "2026-05-02T06:51:43.926Z"
 }

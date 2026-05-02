@@ -33,6 +33,10 @@ async function ensureDataDir(): Promise<void> {
 /**
  * Read all profiles from storage.
  * Returns empty array if file doesn't exist.
+ *
+ * BOM-tolerant: strips the UTF-8 BOM (EF BB BF) that Windows tools like
+ * PowerShell ConvertTo-Json and Notepad sometimes prepend to JSON files.
+ * Without this, JSON.parse throws on the hidden \uFEFF character.
  */
 export async function getAllProfiles(): Promise<Profile[]> {
 	try {
@@ -40,7 +44,9 @@ export async function getAllProfiles(): Promise<Profile[]> {
 		if (!existsSync(PROFILES_FILE)) {
 			return [];
 		}
-		const data = await readFile(PROFILES_FILE, "utf-8");
+		const raw = await readFile(PROFILES_FILE, "utf-8");
+		// Strip UTF-8 BOM if present (char code 65279 / \uFEFF)
+		const data = raw.charCodeAt(0) === 0xfeff ? raw.slice(1) : raw;
 		return JSON.parse(data) as Profile[];
 	} catch (error) {
 		console.error("[Profiles] Error reading profiles:", error);

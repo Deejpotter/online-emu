@@ -55,6 +55,25 @@ const METADATA_FILES = [
 ];
 
 /**
+ * Per-core report files (build metadata + options schema).
+ * EmulatorJS fetches these at runtime from /emulatorjs/data/cores/reports/{core}.json
+ * If missing, the request hits the Next.js router and returns a 404 HTML page,
+ * which EmulatorJS may attempt to parse as JSON → console errors.
+ */
+const CORE_REPORT_FILES = [
+  "cores/reports/fceumm.json",
+  "cores/reports/snes9x.json",
+  "cores/reports/gambatte.json",
+  "cores/reports/mgba.json",
+  "cores/reports/mupen64plus_next.json",
+  "cores/reports/genesis_plus_gx.json",
+  "cores/reports/pcsx_rearmed.json",
+  "cores/reports/desmume2015.json",
+  "cores/reports/ppsspp.json",
+  "cores/reports/stella2014.json",
+];
+
+/**
  * Localization files for EmulatorJS UI strings.
  * Without these, EmulatorJS logs "Translation not found" for every UI element.
  */
@@ -223,6 +242,21 @@ async function setup() {
   console.log("");
   console.log("📦 Downloading core metadata...");
   for (const file of METADATA_FILES) {
+    const url = `${CDN_BASE}/${file}`;
+    const destPath = path.join(DATA_DIR, file);
+    await downloadWithLog(url, destPath);
+  }
+
+  // Download per-core report files (build metadata + options)
+  // EmulatorJS fetches these at runtime. Missing reports cause HTML 404 pages
+  // to be returned instead of JSON, which triggers parse errors in the console.
+  console.log("");
+  console.log("📦 Downloading core report files...");
+  ensureDir(path.join(DATA_DIR, "cores", "reports"));
+  for (const file of CORE_REPORT_FILES) {
+    const url = `${CDN_BASE}/${file}`;
+    const destPath = path.join(DATA_DIR, file);
+    await downloadWithLog(url, destPath);
   }
 
   // Download localization files
