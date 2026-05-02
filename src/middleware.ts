@@ -22,6 +22,8 @@ export function middleware(request: NextRequest) {
 	const publicPaths = [
 		"/profiles",
 		"/api/profiles",
+		"/api/status",
+		"/api/systems",
 		"/_next",
 		"/emulatorjs",
 		"/manifest.json",
