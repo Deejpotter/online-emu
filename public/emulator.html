@@ -908,15 +908,19 @@
                 console.warn('[EmulatorJS] Could not re-apply joystick mapping at game start:', err);
             }
 
-            // NOTE: No auto-save intervals anymore!
-            // Saves happen via EJS_onSaveUpdate (when game saves) and EJS_onSaveState (manual save)
-            // Plus backup saves on visibility change / tab close
+            // =====================================================================
+            // AUTO-RESTORE: Load save state + SRM from server on game start
+            //
+            // Order matters:
+            //   1. Load SRM first (500ms delay) — restores in-game save memory
+            //   2. Load save state second (1500ms delay) — snaps emulator to exact
+            //      position. Runs after SRM so the game's memory is populated
+            //      before the state is applied.
+            //
+            // Both are graceful: 404 = no previous save, game starts fresh.
+            // =====================================================================
 
-            // Load SRM (in-game saves) from server
-            // Must happen AFTER the game starts so the emulator has initialized.
-            // 500ms gives the WASM core time to finish setting up its virtual FS
-            // before we try to write SRM data into it.
-            // Retries once after another 1s if the emulator wasn't ready on first attempt.
+            // Step 1: Load SRM (in-game saves) from server
             setTimeout(async () => {
                 console.log('[Server SRM] Loading in-game saves from server...');
                 const loaded = await loadSrmFromServer();
@@ -935,9 +939,51 @@
                 }
             }, 500);
 
-            // NOTE: We do NOT auto-load save states anymore.
-            // Save states are for manual "quick save/load" via the UI buttons.
-            // In-game saves (SRM) are what persist automatically.
+            // Step 2: Auto-load save state from server
+            // Runs after SRM load so game memory is ready before state is applied.
+            setTimeout(async () => {
+                console.log('[Server Save] Auto-loading last save state from server...');
+                const loaded = await loadFromServer(0);
+                if (loaded) {
+                    console.log('[Server Save] ✅ Auto-restored save state from server');
+                    const ejs = window.EJS_emulator;
+                    if (ejs && typeof ejs.displayMessage === 'function') {
+                        ejs.displayMessage('SAVE RESTORED');
+                    }
+                } else {
+                    console.log('[Server Save] No previous save state found (normal for new games)');
+                }
+            }, 1500);
+
+            // =====================================================================
+            // AUTO-SAVE: Save state to server every 60 seconds silently
+            //
+            // Runs in the background. No UI feedback unless it fails.
+            // The manual Save button still works for intentional checkpoints.
+            // =====================================================================
+            const AUTO_SAVE_INTERVAL_MS = 60 * 1000; // 60 seconds
+            const autoSaveInterval = setInterval(async () => {
+                const ejs = window.EJS_emulator;
+                // Don't auto-save if emulator has been destroyed (page navigating away)
+                if (!ejs || !ejs.gameManager) {
+                    clearInterval(autoSaveInterval);
+                    return;
+                }
+                console.log('[Server Save] ⏰ Auto-saving state...');
+                const ok = await saveToServer(0);
+                if (ok) {
+                    console.log('[Server Save] ✅ Auto-save complete');
+                } else {
+                    console.warn('[Server Save] ⚠️ Auto-save failed (will retry next interval)');
+                }
+                // Also flush SRM in case the game wrote in-game save data
+                // that didn't trigger EJS_onSaveUpdate (some cores are inconsistent)
+                await saveSrmToServer();
+            }, AUTO_SAVE_INTERVAL_MS);
+            console.log('[Server Save] Auto-save started (every 60s)');
+
+            // Clean up interval when page hides (prevents ghost intervals)
+            window.addEventListener('pagehide', () => clearInterval(autoSaveInterval), { once: true });
         };
 
         // EmulatorJS save/load callbacks

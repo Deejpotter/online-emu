@@ -48,11 +48,12 @@
 - ✅ 4.2: ROMs at `H:\Games\{System}\ROMs\` — ~40 system folders
 - ✅ 4.3: `.env` updated with `GAMES_DIR=H:\Games`, PM2 restarted
 
-### ⬜ Step 5: Testing & Verification
-- ⬜ 5.1: Test profile creation
-- ⬜ 5.2: Test game loading (multiple systems) — blocked by emulator bugs below
-- ⬜ 5.3: Test save states
-- ⬜ 5.4: Test SRM saves (in-game saves)
+### ✅ Step 5: Testing & Verification
+- ✅ 5.1: Profile creation works
+- ✅ 5.2: Games load and run (GBA confirmed, Fire Red and Leaf Green)
+- ⬜ 5.3: Auto-save state (every 60s) — verify in PM2 logs
+- ⬜ 5.4: Auto-load save state on game start — verify position is restored
+- ✅ 5.4b: SRM (in-game saves) save and load — confirmed working in PM2 logs
 - ⬜ 5.5: Verify PWA installable on mobile
 
 ---
