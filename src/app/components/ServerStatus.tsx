@@ -155,8 +155,7 @@ export function ServerStatus() {
 			<div className="pt-4 border-t border-zinc-700">
 				<p className="text-sm text-zinc-400 mb-2">📱 To connect from mobile:</p>
 				<ol className="text-xs text-zinc-500 space-y-1 list-decimal list-inside">
-					<li>Connect to the same WiFi network as this PC</li>
-					<li>Open the address above in your mobile browser</li>
+					<li>Open <span className="font-mono text-zinc-300">roms.deejpotter.com</span> in your mobile browser</li>
 					<li>Add to home screen for app-like experience</li>
 				</ol>
 			</div>
