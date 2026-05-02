@@ -1,5 +1,5 @@
-/**
- * Emulator Page Content — DESIGN RATIONALE
+﻿/**
+ * Emulator Page Content â€” DESIGN RATIONALE
  *
  * Purpose: host EmulatorJS in a safe, isolated environment while keeping a
  * React-based UI for library, controls and save management.
@@ -12,7 +12,7 @@
  *   allowing the emulator to run at native speed in-browser.
  *
  * Communication pattern (robust and explicit):
- * - `postMessage` used for all parent↔iframe interactions to avoid coupling.
+ * - `postMessage` used for all parentâ†”iframe interactions to avoid coupling.
  * - Messages are small, event-driven and authoritative (e.g. emulator "save"
  *   events trigger immediate server uploads). This avoids polling and race
  *   conditions.
@@ -21,8 +21,8 @@
  * - Event-driven saves: SRM and manual save-states are uploaded immediately on
  *   emulator events. This gives deterministic feedback to users and removes
  *   the uncertainty associated with periodic polling.
- * - Joystick-first input mapping: left-analog mapped to D‑pad by default to
- *   support common controllers where D‑pad may be unreliable — improves UX
+ * - Joystick-first input mapping: left-analog mapped to Dâ€‘pad by default to
+ *   support common controllers where Dâ€‘pad may be unreliable â€” improves UX
  *   across real devices.
  *
  * Security & threading note:
@@ -363,7 +363,7 @@ export function EmulatorContent() {
 		return (
 			<div className="min-h-screen bg-zinc-950 flex items-center justify-center">
 				<div className="text-center">
-					<div className="text-6xl mb-4 animate-pulse">🎮</div>
+					<div className="text-6xl mb-4 animate-pulse">ðŸŽ®</div>
 					<p className="text-zinc-400">Loading emulator...</p>
 				</div>
 			</div>
@@ -375,14 +375,14 @@ export function EmulatorContent() {
 		return (
 			<div className="min-h-screen bg-zinc-950 flex items-center justify-center">
 				<div className="text-center max-w-md">
-					<div className="text-6xl mb-4">❌</div>
+					<div className="text-6xl mb-4">âŒ</div>
 					<h1 className="text-xl font-bold mb-2">Failed to load game</h1>
 					<p className="text-zinc-400 mb-6">{error || "Unknown error"}</p>
 					<a
 						href="/"
 						className="inline-block px-6 py-3 bg-blue-600 hover:bg-blue-500 rounded-lg font-medium transition-colors"
 					>
-						← Back to Library
+						â† Back to Library
 					</a>
 				</div>
 			</div>
@@ -413,7 +413,7 @@ export function EmulatorContent() {
 					</p>
 					<div className="flex flex-col sm:flex-row items-center justify-center gap-3">
 						<a
-							href={`http://localhost:3000/play?id=${game.id}`}
+							href={`http://localhost:3100/play?id=${game.id}`}
 							className="px-4 py-2 bg-blue-600 text-white rounded-md shadow-sm"
 						>
 							Open on localhost
@@ -421,7 +421,7 @@ export function EmulatorContent() {
 						<button
 							onClick={() => {
 								navigator.clipboard?.writeText(
-									`http://localhost:3000/play?id=${game.id}`
+									`http://localhost:3100/play?id=${game.id}`
 								);
 								showToast("Local URL copied to clipboard", "info");
 							}}
@@ -457,7 +457,7 @@ export function EmulatorContent() {
 							href="/"
 							className="text-zinc-400 hover:text-white transition-colors shrink-0 text-sm md:text-base"
 						>
-							← Back
+							â† Back
 						</a>
 						{showControls && (
 							<div className="min-w-0">
@@ -466,8 +466,8 @@ export function EmulatorContent() {
 								</h1>
 								<p className="text-xs text-zinc-500">
 									{game.system.toUpperCase()}
-									{emulatorState === "loading" && " • Loading..."}
-									{emulatorState === "paused" && " • Paused"}
+									{emulatorState === "loading" && " â€¢ Loading..."}
+									{emulatorState === "paused" && " â€¢ Paused"}
 								</p>
 							</div>
 						)}
@@ -481,13 +481,13 @@ export function EmulatorContent() {
 									onClick={() => sendToEmulator({ type: "saveState" })}
 									className="px-3 py-2 text-xs md:text-sm bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors min-h-[44px]"
 								>
-									💾 Save
+									ðŸ’¾ Save
 								</button>
 								<button
 									onClick={() => sendToEmulator({ type: "loadState" })}
 									className="px-3 py-2 text-xs md:text-sm bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors min-h-[44px]"
 								>
-									📂 Load
+									ðŸ“‚ Load
 								</button>
 							</>
 						)}
@@ -498,7 +498,7 @@ export function EmulatorContent() {
 							className="px-3 py-2 text-xs md:text-sm bg-blue-600 hover:bg-blue-500 rounded-lg transition-colors font-medium min-h-[44px]"
 							title="Toggle fullscreen"
 						>
-							⛶ Full
+							â›¶ Full
 						</button>
 
 						{/* Toggle header visibility on mobile */}
@@ -507,7 +507,7 @@ export function EmulatorContent() {
 							className="md:hidden px-3 py-2 text-xs bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors min-h-[44px]"
 							title={showControls ? "Hide controls" : "Show controls"}
 						>
-							{showControls ? "▲" : "▼"}
+							{showControls ? "â–²" : "â–¼"}
 						</button>
 					</div>
 				</div>
@@ -531,7 +531,7 @@ export function EmulatorContent() {
 				{emulatorState === "loading" && (
 					<div className="absolute inset-0 flex items-center justify-center bg-black/80 z-10 pointer-events-none">
 						<div className="text-center">
-							<div className="text-4xl mb-4 animate-pulse">🎮</div>
+							<div className="text-4xl mb-4 animate-pulse">ðŸŽ®</div>
 							<p className="text-zinc-400">Initializing emulator...</p>
 							<p className="text-zinc-500 text-sm mt-2">
 								Click the game to start
@@ -553,3 +553,4 @@ export function EmulatorContent() {
 		</div>
 	);
 }
+

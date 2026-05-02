@@ -2,6 +2,8 @@
 
 Self-hosted retro game emulator powered by EmulatorJS. Play classic console games in your browser with support for save states, profiles, and PWA installation.
 
+**Live at:** https://roms.deejpotter.com (via Cloudflare Tunnel, runs on DESKTOP-UBV27I5)
+
 ## Features
 
 - **Browser-Based Emulation** - EmulatorJS runs entirely in your browser using WebAssembly cores
@@ -25,27 +27,70 @@ yarn dev:next        # Start the Next.js dev server (http://localhost:3000)
 
 Notes:
 
-- `yarn dev:next` is the recommended, fast dev workflow. It starts the Next.js app directly and is the primary method documented here.
-- For production-like behaviour (server initialization, ROM scan), run the production server with `yarn build && yarn start` instead of the dev server.
+- `yarn dev:next` is the recommended, fast dev workflow. It starts the Next.js app directly.
+- For production-like behaviour (server initialization, ROM scan), run `yarn build && yarn start`.
 
-### Production Deployment (Vultr VPS)
+### Production Deployment (Local PC via Cloudflare Tunnel)
 
-This project is designed to run on a Vultr VPS (Standard plan recommended: $12/mo, 80GB SSD, 4GB RAM).
+This project runs on **DESKTOP-UBV27I5** (Windows) and is exposed publicly via Cloudflare Tunnel at `roms.deejpotter.com`.
+
+#### 1. Build and start with PM2
 
 ```bash
-# 1. Clone and install
-git clone <your-repo-url> online-emu
-cd online-emu
 yarn install
 yarn build
-
-# 2. Create ROMs directory (outside web root)
-mkdir -p /root/online-emu/roms
-
-# 3. Configure environment
-cp .env.example .env.local
+pm2 start ecosystem.config.js   # Starts on port 3000
+pm2 save                         # Persist across reboots
+pm2 startup                      # Enable autostart
 ```
 
+#### 2. Cloudflare Tunnel
+
+The tunnel is already configured. The relevant ingress rule in `~/.cloudflared/krasus-config.yml`:
+
+```yaml
+- hostname: roms.deejpotter.com
+  service: http://localhost:3100
+```
+
+Tunnel name: `krasus` (shared with other services). Restart the tunnel service after config changes:
+
+```bash
+# Check tunnel status
+cloudflared tunnel list
+
+# Restart tunnel service (Windows)
+Restart-Service cloudflared
+```
+
+#### 3. Cloudflare DNS
+
+Add a CNAME record in Cloudflare DNS:
+- **Name:** `roms`
+- **Target:** `<tunnel-id>.cfargotunnel.com`
+- **Proxy:** Enabled (orange cloud)
+
+#### 4. ROMs
+
+Place ROM files in `public/roms/{system}/` — e.g. `public/roms/nes/`, `public/roms/snes/`, etc.
+
+The app scans this directory automatically on startup.
+
+```bash
+# ROM directory structure
+public/roms/
+  nes/
+  snes/
+  gba/
+  n64/
+  psx/
+  psp/
+  genesis/
+```
+
+## Project Structure
+
+```
 online-emu/
 ├── src/
 │   ├── app/           # Next.js App Router
@@ -72,12 +117,10 @@ online-emu/
 ├── scripts/           # Setup scripts
 ├── ecosystem.config.js     # PM2 configuration
 ├── server.ts          # Custom Next.js server
-├── mobile/            # Deprecated Expo app
 └── .github/
-   ├── copilot-instructions.md   # AI coding guidelines
-   ├── instructions/             # Path-specific guides
-   └── todos.md                   # Development progress
-
+    ├── copilot-instructions.md   # AI coding guidelines
+    ├── instructions/             # Path-specific guides
+    └── todos.md                  # Development progress
 ```
 
 ## Storage Requirements
@@ -95,45 +138,7 @@ Based on typical ROM sizes for a retro collection:
 | PSX | 300-700 MB | ~35 GB |
 | PSP | 500 MB - 1.5 GB | ~80 GB |
 
-**Vultr Standard Plan (80GB SSD)** easily handles a mixed retro library of 200+ smaller games or 50+ larger PSX/PSP titles.
-└── .github/
-   ├── copilot-instructions.md   # AI coding guidelines
-   ├── instructions/             # Path-specific guides
-   └── todos.md                   # Development progress
-```
-
-│   └── types/         # TypeScript definitions
-├── public/
-│   ├── emulator.html  # EmulatorJS host (must be in iframe)
-│   ├── emulatorjs/    # Self-hosted EmulatorJS assets
-│   ├── sw.js          # Service worker
-│   └── roms/          # Game files (user-provided)
-├── data/              # App data (auto-created)
-│   ├── profiles.json       # User profiles
-│   └── metadata.json       # Game metadata cache
-├── scripts/           # Setup scripts
-├── ecosystem.config.js     # PM2 configuration
-├── server.ts          # Custom Next.js server
-│
-├── mobile/            # Deprecated Expo app
-└── .github/
-   ├── copilot-instructions.md   # AI coding guidelines
-   ├── instructions/             # Path-specific guides
-   └── todos.md                   # Development progress
-Based on typical ROM sizes for a retro collection:
-
-| System | Typical ROM Size | ~100 Games |
-|--------|------------------|------------|
-| NES | 40-512 KB | ~50 MB |
-| SNES | 512 KB - 6 MB | ~200 MB |
-| GB/GBC | 32 KB - 2 MB | ~100 MB |
-| GBA | 4-32 MB | ~1.5 GB |
-| N64 | 8-64 MB | ~3 GB |
-| Genesis | 512 KB - 4 MB | ~150 MB |
-| PSX | 300-700 MB | ~35 GB |
-| PSP | 500 MB - 1.5 GB | ~80 GB |
-
-**Vultr Standard Plan (80GB SSD)** easily handles a mixed retro library of 200+ smaller games or 50+ larger PSX/PSP titles.
+Your local PC storage determines capacity — no VPS required.
 
 ## Architecture
 

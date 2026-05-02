@@ -1,17 +1,17 @@
 # Online Emulator - Development TODOs
 
-## Current Phase: Simple Vultr Deployment
+## Current Phase: Local PC + Cloudflare Tunnel Deployment
 
-**Goal**: Deploy the working online-emu app to Vultr VPS with direct Node.js + PM2 (no Docker/Coolify).
+**Goal**: Run online-emu on DESKTOP-UBV27I5 (Windows, local PC) and expose it publicly at `roms.deejpotter.com` via the existing Cloudflare Tunnel (`krasus`).
 
 **Why**:
 
-- Current local version works perfectly (profiles, saves, EmulatorJS integration)
-- Keep deployment simple and maintainable
-- Vultr Standard plan ($12/mo): 80GB storage, 4GB RAM - ideal for retro games
-- Direct Node.js deployment easier to debug and update than containers
+- Local PC has plenty of storage for ROMs — no VPS cost
+- Cloudflare Tunnel already set up and working for other services (krasus, tasks)
+- Same pattern as other self-hosted apps (consistent, easy to manage)
+- PM2 handles autostart on Windows boot
 
-**Note**: Docker/Coolify work archived in branch `archive/coolify-docker-attempt` for future reference.
+**Note**: Vultr VPS deployment plan archived — no longer needed. Docker/Coolify work archived in branch `archive/coolify-docker-attempt`.
 
 ---
 
@@ -24,126 +24,41 @@
 
 ---
 
-## 📋 Vultr Deployment Plan
+## 📋 Local PC + Cloudflare Tunnel Deployment
 
-## 📦 Server Folder → Root Migration
+### ✅ Step 1: Build
 
-**Goal**: Move the Next.js app currently under `server/` to the repository root while preserving data and developer workflows.
+- ✅ 1.1: `yarn install` — dependencies installed
+- ✅ 1.2: `yarn build` — production bundle built
 
-### ✅ Step 1: Inventory + conflict check
+### ⬜ Step 2: Start with PM2
 
-- ✅ 1.1: List root vs `server/` top-level files to identify conflicts (README, data, node_modules, .env)
-- ✅ 1.2: Scan for references to `server/` paths in docs, scripts, and code
-- ✅ 1.3: Confirm which artifacts should NOT move (node_modules, .next, coverage)
+- ⬜ 2.1: Install PM2 globally if not present (`npm install -g pm2`)
+- ⬜ 2.2: Start app (`pm2 start ecosystem.config.js`)
+- ⬜ 2.3: Save PM2 process list (`pm2 save`)
+- ⬜ 2.4: Enable auto-start on boot (`pm2 startup`)
+- ⬜ 2.5: Test app locally at `http://localhost:3000`
 
-### ✅ Step 2: Move core app files to root
+### ⬜ Step 3: Cloudflare DNS
 
-- ✅ 2.1: Move `server/src` → `src/`
-- ✅ 2.2: Move `server/public` → `public/`
-- ✅ 2.3: Move `server/scripts` → `scripts/`
-- ✅ 2.4: Move `server/server.ts` → `server.ts`
-- ✅ 2.5: Move config files (`next.config.ts`, `tsconfig.json`, `eslint.config.mjs`, `postcss.config.mjs`, `next-env.d.ts`)
-- ✅ 2.6: Move testing config (`jest.config.cjs`, `jest.env.js`, `jest.setup.ts`)
-- ✅ 2.7: Move runtime config (`ecosystem.config.js`, `.env.example`) and `package.json`/lockfile
+- ⬜ 3.1: Add CNAME in Cloudflare DNS: `roms` → `<tunnel-id>.cfargotunnel.com`, proxied
+- ⬜ 3.2: Verify tunnel config has `roms.deejpotter.com → http://localhost:3000` (done in `krasus-config.yml`)
+- ⬜ 3.3: Restart cloudflared tunnel service (`Restart-Service cloudflared`)
+- ⬜ 3.4: Verify `https://roms.deejpotter.com` is accessible
 
-### ✅ Step 3: Resolve conflicts and preserve data
+### ⬜ Step 4: Add ROMs
 
-- ✅ 3.1: Compare `data/` in root vs `server/data/`; keep the newest or merge
-- ✅ 3.2: Merge `server/README.md` content into root `README.md` and remove `server/README.md`
-- ✅ 3.3: Ensure `.env` stays at root and no secrets are overwritten
+- ⬜ 4.1: Create ROM folders under `public/roms/{system}/`
+- ⬜ 4.2: Copy ROM files into appropriate system folders
+- ⬜ 4.3: Verify games appear in the library
 
-### ✅ Step 4: Update references after move
+### ⬜ Step 5: Testing & Verification
 
-- ✅ 4.1: Update docs that mention `cd server` or `server/` paths
-- ✅ 4.2: Update scripts/log messages that reference `server` pathing
-- ✅ 4.3: Verify config paths (turbopack root, ROM paths, data paths) still resolve correctly
-
-### ✅ Step 5: Cleanup + verification
-
-- ✅ 5.1: Remove leftover `server/` directory artifacts (if any) after move
-- ✅ 5.2: Run lint/test/build if requested; otherwise spot-check for obvious path issues
-
-### ⬜ Step 1: Server Setup
-
-- ⬜ 1.1: SSH to Vultr server (`ssh root@67.219.108.61`)
-- ⬜ 1.2: Update system packages (`apt update && apt upgrade -y`)
-- ⬜ 1.3: Install Node.js 20 via nvm
-
-  ```bash
-  curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
-  source ~/.bashrc
-  nvm install 20
-  nvm use 20
-  ```
-
-- ⬜ 1.4: Install PM2 globally (`npm install -g pm2`)
-- ⬜ 1.5: Install git (`apt install git -y`)
-
-### ⬜ Step 2: Clone Repository
-
-- ⬜ 2.1: Clone repo to `/opt/online-emu`
-
-  ```bash
-  cd /opt
-  git clone https://github.com/Deejpotter/online-emu.git
-  cd online-emu
-  ```
-
-- ⬜ 2.2: Install dependencies (`npm install`)
-- ⬜ 2.3: Build production bundle (`npm run build`)
-
-### ⬜ Step 3: Upload ROM Files
-
-- ⬜ 3.1: Create ROM directories on server (or use existing `/srv/roms`)
-- ⬜ 3.2: Upload ROMs from local PC via SCP
-
-  ```bash
-  # Example: Upload NES ROMs from Windows PC
-  scp -r "H:/Games/NES/ROMs/." root@67.219.108.61:/opt/online-emu/public/roms/nes/
-  ```
-
-- ⬜ 3.3: Verify ROM files accessible
-
-### ⬜ Step 4: Configure Environment
-
-- ⬜ 4.1: Create `.env` file (if needed for any production configs)
-- ⬜ 4.2: Verify `ecosystem.config.js` settings (already exists)
-- ⬜ 4.3: Set proper file permissions
-
-### ⬜ Step 5: Start with PM2
-
-- ⬜ 5.1: Start app (`pm2 start ecosystem.config.js`)
-- ⬜ 5.2: Save PM2 process list (`pm2 save`)
-- ⬜ 5.3: Enable auto-start on boot (`pm2 startup`)
-- ⬜ 5.4: Test app at `http://67.219.108.61:3000`
-
-### ⬜ Step 6: Firewall Configuration
-
-- ⬜ 6.1: Install UFW (`apt install ufw -y`)
-- ⬜ 6.2: Allow SSH (`ufw allow 22/tcp`)
-- ⬜ 6.3: Allow port 3000 (`ufw allow 3000/tcp`)
-- ⬜ 6.4: Enable firewall (`ufw enable`)
-
-### ⬜ Step 7: Optional - Nginx Reverse Proxy
-
-- ⬜ 7.1: Install Nginx (`apt install nginx -y`)
-- ⬜ 7.2: Configure proxy to port 3000
-- ⬜ 7.3: Install Certbot for SSL (`apt install certbot python3-certbot-nginx -y`)
-- ⬜ 7.4: Get SSL certificate (if using custom domain)
-
-### ⬜ Step 8: Testing & Verification
-
-- ⬜ 8.1: Test profile creation
-- ⬜ 8.2: Test game loading (multiple systems)
-- ⬜ 8.3: Test save states
-- ⬜ 8.4: Test SRM saves (in-game saves)
-- ⬜ 8.5: Verify PWA installable on mobile
-
-### ⬜ Step 9: Monitoring & Maintenance
-
-- ⬜ 9.1: Set up log rotation for PM2 logs
-- ⬜ 9.2: Configure PM2 monitoring (`pm2 monit`)
-- ⬜ 9.3: Document update procedure (git pull, rebuild, pm2 restart)
+- ⬜ 5.1: Test profile creation
+- ⬜ 5.2: Test game loading (multiple systems)
+- ⬜ 5.3: Test save states
+- ⬜ 5.4: Test SRM saves (in-game saves)
+- ⬜ 5.5: Verify PWA installable on mobile
 
 ---
 

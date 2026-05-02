@@ -682,7 +682,9 @@
         //   - Used as local fallback
         // ==========================================
 
-        // Keep IndexedDB saves as fallback (for SRM/memory card data)
+        // Keep IndexedDB saves as a secondary fallback (browser-local only).
+        // This does NOT replace server saves — it just ensures the browser copy
+        // stays reasonably fresh in case of an unexpected crash.
         window.EJS_fixedSaveInterval = 5000;
 
         // Debounce tracking for event-based saves
@@ -690,26 +692,10 @@
         let srmDebounceTimer = null;
         const SAVE_DEBOUNCE_MS = 500; // Debounce saves by 500ms
 
-        /**
-         * Debounced save to server - prevents save spam when multiple updates happen quickly
-         */
-        function debouncedSaveToServer() {
-            if (saveDebounceTimer) {
-                clearTimeout(saveDebounceTimer);
-            }
-            saveDebounceTimer = setTimeout(async () => {
-                saveDebounceTimer = null;
-                await saveToServer(0);
-            }, SAVE_DEBOUNCE_MS);
-        }
-
-        /**
-         * Debounced SRM save to server
-         */
+        // Debounce timers kept for visibility/blur fallback paths only.
+        // Primary saves are immediate and event-driven (EJS_onSaveUpdate / EJS_onSaveState).
         function debouncedSrmSave() {
-            if (srmDebounceTimer) {
-                clearTimeout(srmDebounceTimer);
-            }
+            if (srmDebounceTimer) clearTimeout(srmDebounceTimer);
             srmDebounceTimer = setTimeout(async () => {
                 srmDebounceTimer = null;
                 await saveSrmToServer();
@@ -760,17 +746,13 @@
             triggerSaveFlush('Page hide');
         });
 
-        // Also handle beforeunload
-        window.addEventListener('beforeunload', function (event) {
-            // Try to save (won't wait for completion)
+        // beforeunload: fire-and-forget saves, no confirm dialog
+        // Saves are event-driven — SRM is already persisted when the game writes it.
+        // A confirm dialog here is misleading and blocks the save from completing.
+        window.addEventListener('beforeunload', function () {
             saveToServer(0);
             saveSrmToServer();
             triggerSaveFlush('beforeunload');
-
-            // Show warning dialog to give async save time to complete
-            event.preventDefault();
-            event.returnValue = 'Your game progress may not be saved yet. Are you sure you want to leave?';
-            return event.returnValue;
         });
 
         // Debug: Check IndexedDB for existing saves on page load
@@ -918,17 +900,27 @@
             // Plus backup saves on visibility change / tab close
 
             // Load SRM (in-game saves) from server
-            // This must happen AFTER the game starts so the emulator has initialized
-            // But BEFORE the user plays, so they see their saved progress
+            // Must happen AFTER the game starts so the emulator has initialized.
+            // 500ms gives the WASM core time to finish setting up its virtual FS
+            // before we try to write SRM data into it.
+            // Retries once after another 1s if the emulator wasn't ready on first attempt.
             setTimeout(async () => {
                 console.log('[Server SRM] Loading in-game saves from server...');
                 const loaded = await loadSrmFromServer();
                 if (loaded) {
                     console.log('[Server SRM] ✅ Restored in-game saves from server');
                 } else {
-                    console.log('[Server SRM] No previous in-game saves found (this is normal for new games)');
+                    // Retry once — emulator may still be initialising virtual FS
+                    setTimeout(async () => {
+                        const retried = await loadSrmFromServer();
+                        if (retried) {
+                            console.log('[Server SRM] ✅ Restored in-game saves from server (retry)');
+                        } else {
+                            console.log('[Server SRM] No previous in-game saves found (normal for new games)');
+                        }
+                    }, 1000);
                 }
-            }, 100);
+            }, 500);
 
             // NOTE: We do NOT auto-load save states anymore.
             // Save states are for manual "quick save/load" via the UI buttons.
