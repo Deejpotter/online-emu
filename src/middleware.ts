@@ -24,8 +24,14 @@ export function middleware(request: NextRequest) {
 		"/api/profiles",
 		"/api/status",
 		"/api/systems",
+		// ROM files don't need auth — they're served by the emulator iframe which
+		// may not have the profileId cookie set yet during initial load.
+		"/api/roms",
 		"/_next",
 		"/emulatorjs",
+		// The emulator iframe page — served as a static file but being explicit
+		// ensures the middleware never accidentally intercepts it.
+		"/emulator.html",
 		"/manifest.json",
 		"/sw.js",
 		"/icons",

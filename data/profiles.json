@@ -1,20 +1,26 @@
-[
-  {
-    "id": "b9c87b8c-691a-4fc6-a623-3b7ba5704f62",
-    "name": "Deej",
-    "avatar": "🐺",
-    "createdAt": "2026-02-14T03:56:23.445Z"
-  },
-  {
-    "id": "c5dc4fa9-36b5-4231-9888-cdd2a0afa8eb",
-    "name": "CLI Test",
-    "avatar": "👤",
-    "createdAt": "2026-02-14T04:14:47.020Z"
-  },
-  {
-    "id": "c50942b0-a87b-418f-a485-321e61f522a8",
-    "name": "Localhost Test",
-    "avatar": "👤",
-    "createdAt": "2026-02-14T04:32:09.458Z"
-  }
+﻿[
+    {
+        "id":  "b9c87b8c-691a-4fc6-a623-3b7ba5704f62",
+        "name":  "Deej",
+        "avatar":  "ðŸº",
+        "createdAt":  "2026-02-14T03:56:23.445Z"
+    },
+    {
+        "id":  "c5dc4fa9-36b5-4231-9888-cdd2a0afa8eb",
+        "name":  "CLI Test",
+        "avatar":  "ðŸ‘¤",
+        "createdAt":  "2026-02-14T04:14:47.020Z"
+    },
+    {
+        "id":  "c50942b0-a87b-418f-a485-321e61f522a8",
+        "name":  "Localhost Test",
+        "avatar":  "ðŸ‘¤",
+        "createdAt":  "2026-02-14T04:32:09.458Z"
+    },
+    {
+        "id":  "ba28aa3b-17f5-42d0-aee7-802fc139ee03",
+        "name":  "TestProfile",
+        "avatar":  "ðŸ‘¤",
+        "createdAt":  "2026-05-02T06:09:57.324Z"
+    }
 ]

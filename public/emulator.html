@@ -577,14 +577,17 @@
         window.EJS_gameName = gameName;
         console.log('[EmulatorJS] Game name for saves:', gameName);
 
-        // Auto-load last save state on game start.
-        // EJS_loadStateURL tells EmulatorJS to fetch and apply a save state
-        // immediately after the core initialises — no user action needed.
-        // The server returns 404 for new games (no save yet), which EmulatorJS
-        // handles gracefully by simply starting from the beginning.
-        // Profile ID is passed via cookie automatically by the browser.
-        window.EJS_loadStateURL = `/api/saves/${encodeURIComponent(gameName)}?system=${encodeURIComponent(core)}&slot=0`;
-        console.log('[EmulatorJS] Auto-load URL:', window.EJS_loadStateURL);
+        // NOTE: EJS_loadStateURL is intentionally NOT set here.
+        //
+        // We do NOT auto-restore save states on game start for two reasons:
+        //   1. For new games, the server returns a JSON 404 error body (not binary data).
+        //      EmulatorJS tries to parse that JSON as a save state → fails → shows
+        //      "Error downloading game state" banner and halts emulator init.
+        //   2. Save states are for manual quick-save/load only (the in-game SRM system
+        //      is what persists automatically via EJS_onSaveUpdate).
+        //
+        // In-game saves (SRM) are loaded in EJS_onGameStart via loadSrmFromServer().
+        // That path handles 404 gracefully (normal for new games, starts fresh).
 
         // Debug mode - DISABLED (requires unminified source files we don't have)
         // When enabled, it tries to load GameManager.js, gamepad.js, etc. from src/

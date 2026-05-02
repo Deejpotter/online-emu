@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+﻿#!/usr/bin/env node
 
 /**
  * EmulatorJS Setup Script
@@ -52,6 +52,14 @@ const COMPRESSION_FILES = [
  */
 const METADATA_FILES = [
   "cores/cores.json",  // Core metadata
+];
+
+/**
+ * Localization files for EmulatorJS UI strings.
+ * Without these, EmulatorJS logs "Translation not found" for every UI element.
+ */
+const LOCALIZATION_FILES = [
+  "localization/en-US.json",
 ];
 
 /**
@@ -191,6 +199,7 @@ async function setup() {
   ensureDir(DATA_DIR);
   ensureDir(path.join(DATA_DIR, "cores"));
   ensureDir(path.join(DATA_DIR, "compression"));
+  ensureDir(path.join(DATA_DIR, "localization"));
 
   // Download core UI files
   console.log("📦 Downloading EmulatorJS core files...");
@@ -214,6 +223,16 @@ async function setup() {
   console.log("");
   console.log("📦 Downloading core metadata...");
   for (const file of METADATA_FILES) {
+  }
+
+  // Download localization files
+  console.log("");
+  console.log("📦 Downloading localization files...");
+  console.log("   (Required for translated UI strings)");
+  for (const file of LOCALIZATION_FILES) {
+    const url = `${CDN_BASE}/${file}`;
+    const destPath = path.join(DATA_DIR, file);
+    await downloadWithLog(url, destPath);
   }
 
   // Download emulator cores
