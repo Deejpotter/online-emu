@@ -577,6 +577,15 @@
         window.EJS_gameName = gameName;
         console.log('[EmulatorJS] Game name for saves:', gameName);
 
+        // Auto-load last save state on game start.
+        // EJS_loadStateURL tells EmulatorJS to fetch and apply a save state
+        // immediately after the core initialises — no user action needed.
+        // The server returns 404 for new games (no save yet), which EmulatorJS
+        // handles gracefully by simply starting from the beginning.
+        // Profile ID is passed via cookie automatically by the browser.
+        window.EJS_loadStateURL = `/api/saves/${encodeURIComponent(gameName)}?system=${encodeURIComponent(core)}&slot=0`;
+        console.log('[EmulatorJS] Auto-load URL:', window.EJS_loadStateURL);
+
         // Debug mode - DISABLED (requires unminified source files we don't have)
         // When enabled, it tries to load GameManager.js, gamepad.js, etc. from src/
         // We only have minified versions (emulator.min.js, emulator.min.css)
@@ -682,10 +691,11 @@
         //   - Used as local fallback
         // ==========================================
 
-        // Keep IndexedDB saves as a secondary fallback (browser-local only).
-        // This does NOT replace server saves — it just ensures the browser copy
-        // stays reasonably fresh in case of an unexpected crash.
-        window.EJS_fixedSaveInterval = 5000;
+        // No fixed save interval — all saves are event-driven:
+        //   SRM: EJS_onSaveUpdate fires when the game writes to its memory card
+        //   State: EJS_onSaveState fires when the user hits Save
+        //   Fallback: visibilitychange + blur flush to server on tab switch/close
+        // window.EJS_fixedSaveInterval is intentionally not set.
 
         // Debounce tracking for event-based saves
         let saveDebounceTimer = null;
