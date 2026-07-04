@@ -363,7 +363,7 @@ export function EmulatorContent() {
 		return (
 			<div className="min-h-screen bg-zinc-950 flex items-center justify-center">
 				<div className="text-center">
-					<div className="text-6xl mb-4 animate-pulse">ðŸŽ®</div>
+					<div className="text-6xl mb-4 animate-pulse">🎮</div>
 					<p className="text-zinc-400">Loading emulator...</p>
 				</div>
 			</div>
@@ -382,7 +382,7 @@ export function EmulatorContent() {
 						href="/"
 						className="inline-block px-6 py-3 bg-blue-600 hover:bg-blue-500 rounded-lg font-medium transition-colors"
 					>
-						â† Back to Library
+						← Back to Library
 					</a>
 				</div>
 			</div>
@@ -457,7 +457,7 @@ export function EmulatorContent() {
 							href="/"
 							className="text-zinc-400 hover:text-white transition-colors shrink-0 text-sm md:text-base"
 						>
-							â† Back
+							← Back
 						</a>
 						{showControls && (
 							<div className="min-w-0">
@@ -466,8 +466,8 @@ export function EmulatorContent() {
 								</h1>
 								<p className="text-xs text-zinc-500">
 									{game.system.toUpperCase()}
-									{emulatorState === "loading" && " â€¢ Loading..."}
-									{emulatorState === "paused" && " â€¢ Paused"}
+									{emulatorState === "loading" && " • Loading..."}
+									{emulatorState === "paused" && " • Paused"}
 								</p>
 							</div>
 						)}
@@ -481,13 +481,13 @@ export function EmulatorContent() {
 									onClick={() => sendToEmulator({ type: "saveState" })}
 									className="px-3 py-2 text-xs md:text-sm bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors min-h-[44px]"
 								>
-									ðŸ’¾ Save
+									💾 Save
 								</button>
 								<button
 									onClick={() => sendToEmulator({ type: "loadState" })}
 									className="px-3 py-2 text-xs md:text-sm bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors min-h-[44px]"
 								>
-									ðŸ“‚ Load
+									📂 Load
 								</button>
 							</>
 						)}
@@ -498,7 +498,7 @@ export function EmulatorContent() {
 							className="px-3 py-2 text-xs md:text-sm bg-blue-600 hover:bg-blue-500 rounded-lg transition-colors font-medium min-h-[44px]"
 							title="Toggle fullscreen"
 						>
-							â›¶ Full
+							⛶ Full
 						</button>
 
 						{/* Toggle header visibility on mobile */}
@@ -531,7 +531,7 @@ export function EmulatorContent() {
 				{emulatorState === "loading" && (
 					<div className="absolute inset-0 flex items-center justify-center bg-black/80 z-10 pointer-events-none">
 						<div className="text-center">
-							<div className="text-4xl mb-4 animate-pulse">ðŸŽ®</div>
+							<div className="text-4xl mb-4 animate-pulse">🎮</div>
 							<p className="text-zinc-400">Initializing emulator...</p>
 							<p className="text-zinc-500 text-sm mt-2">
 								Click the game to start

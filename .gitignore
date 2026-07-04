@@ -51,3 +51,9 @@ logs/
 
 # local data (game library metadata)
 /data/
+
+# cloudflare wrangler cache
+.wrangler/
+
+# roms symlink/placeholder
+roms
