@@ -22638,7 +22638,8 @@
       "system": "gba",
       "romPath": "GBA\\ROMs\\medabotsmetabee_version.zip",
       "fileSize": 5738376,
-      "playCount": 0
+      "playCount": 1,
+      "lastPlayed": "2026-07-04T10:03:27.345Z"
     },
     {
       "id": "7afc7ab9-5669-4d44-b543-71b167ecf429",
@@ -23542,8 +23543,8 @@
       "system": "gba",
       "romPath": "GBA\\ROMs\\pokemonfire_red_version.zip",
       "fileSize": 5317127,
-      "playCount": 5,
-      "lastPlayed": "2026-05-02T07:33:36.523Z"
+      "playCount": 15,
+      "lastPlayed": "2026-07-04T09:52:45.615Z"
     },
     {
       "id": "a743df62-e525-4f32-953e-31e804daffc2",
@@ -37071,7 +37072,8 @@
       "system": "n64",
       "romPath": "N64\\ROMs\\Pokemon Stadium 2.zip",
       "fileSize": 48045275,
-      "playCount": 0
+      "playCount": 1,
+      "lastPlayed": "2026-07-05T11:47:23.622Z"
     },
     {
       "id": "56e705a1-7c01-4df7-b0d6-0ec4715a5b6c",
@@ -42759,7 +42761,8 @@
       "system": "nes",
       "romPath": "NES\\ROMs\\Super Mario Bros. + Duck Hunt (USA).zip",
       "fileSize": 47649,
-      "playCount": 0
+      "playCount": 1,
+      "lastPlayed": "2026-06-22T14:58:11.571Z"
     },
     {
       "id": "b90cdb3d-880a-4073-b932-d21932682c2f",
@@ -60722,5 +60725,5 @@
       "playCount": 0
     }
   ],
-  "lastUpdated": "2026-05-02T07:33:36.533Z"
+  "lastUpdated": "2026-07-05T11:47:23.633Z"
 }
