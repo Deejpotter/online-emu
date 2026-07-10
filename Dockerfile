@@ -30,6 +30,11 @@ COPY --from=builder /app/src ./src
 COPY --from=builder /app/server.ts ./
 COPY --from=builder /app/public ./public
 
+# The builder stage ran as root, so copied dirs are root-owned.
+# The runner runs as the non-root 'nextjs' user, which must be able to
+# write Next.js runtime cache to .next and our /data volume mount.
+RUN chown -R nextjs:nodejs /app
+
 USER nextjs
 EXPOSE 3100
 CMD ["npx", "tsx", "server.ts"]
