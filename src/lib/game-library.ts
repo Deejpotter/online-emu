@@ -22,8 +22,9 @@ import type { Game, GameLibrary, EmulatorSystem } from "@/types";
 // Can also be set via GAMES_DIR environment variable
 const GAMES_DIR = process.env.GAMES_DIR || "H:\\Games";
 
-// Metadata is stored locally in the server's data directory
-const DATA_DIR = path.join(process.cwd(), "data");
+// Metadata is stored locally in the server's data directory.
+// Respects DATA_DIR env (Coolify mounts a persistent volume there).
+const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), "data");
 const METADATA_PATH = path.join(DATA_DIR, "metadata.json");
 
 /**
