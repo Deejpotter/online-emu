@@ -25,16 +25,6 @@ const SYSTEM_CORES: Partial<Record<EmulatorSystem, string>> = {
   gb: 'gb',
   gba: 'gba',
   n64: 'n64',
-  nds: 'nds',
-  segaMD: 'segaMD',
-  segaMS: 'segaMS',
-  segaGG: 'segaGG',
-  segaCD: 'segaCD',
-  psx: 'psx',
-  psp: 'psp',
-  atari2600: 'atari2600',
-  arcade: 'arcade',
-  // ps2 and gamecube don't have EmulatorJS cores - they use external emulators
 };
 
 /**

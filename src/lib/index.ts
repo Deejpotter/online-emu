@@ -7,3 +7,4 @@
 
 export * from "./game-library";
 export * from "./profiles";
+export * from "./library-source";

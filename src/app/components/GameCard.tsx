@@ -23,15 +23,6 @@ const SYSTEM_NAMES: Record<EmulatorSystem, string> = {
 	gb: "Game Boy",
 	gba: "GBA",
 	n64: "N64",
-	nds: "DS",
-	segaMD: "Genesis",
-	segaMS: "Master System",
-	segaGG: "Game Gear",
-	segaCD: "Sega CD",
-	psx: "PlayStation",
-	psp: "PSP",
-	atari2600: "Atari 2600",
-	arcade: "Arcade",
 };
 
 /**
@@ -43,15 +34,6 @@ const SYSTEM_COLORS: Record<string, string> = {
 	gb: "bg-green-900/50 border-green-700",
 	gba: "bg-indigo-900/50 border-indigo-700",
 	n64: "bg-yellow-900/50 border-yellow-700",
-	nds: "bg-blue-900/50 border-blue-700",
-	segaMD: "bg-blue-900/50 border-blue-700",
-	segaMS: "bg-cyan-900/50 border-cyan-700",
-	segaGG: "bg-teal-900/50 border-teal-700",
-	segaCD: "bg-sky-900/50 border-sky-700",
-	psx: "bg-gray-800/50 border-gray-600",
-	psp: "bg-slate-800/50 border-slate-600",
-	atari2600: "bg-orange-900/50 border-orange-700",
-	arcade: "bg-pink-900/50 border-pink-700",
 };
 
 /**

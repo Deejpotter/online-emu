@@ -39,40 +39,29 @@ describe("EmulatorContent - fetch & threading behavior", () => {
 		expect(src).toContain("system=nes");
 	});
 
-	test("shows threading warning for PSP when SharedArrayBuffer missing", async () => {
+	test("renders iframe for a GBA game without threading warning", async () => {
 		const fakeGame = {
-			id: "psp1",
-			title: "PSP Game",
-			system: "psp",
-			romPath: "psp/ROMs/psp.iso",
+			id: "gba1",
+			title: "GBA Game",
+			system: "gba",
+			romPath: "gba/ROMs/game.gba",
 		};
 
-		// Ensure SharedArrayBuffer is undefined in this test
-		const origSAB = (global as any).SharedArrayBuffer;
-		try {
-			// delete if present
-			try {
-				delete (global as any).SharedArrayBuffer;
-			} catch {}
+		jest
+			.spyOn(global, "fetch")
+			.mockResolvedValueOnce(
+				new Response(
+					JSON.stringify({ success: true, data: { game: fakeGame } })
+				)
+			);
 
-			jest
-				.spyOn(global, "fetch")
-				.mockResolvedValueOnce(
-					new Response(
-						JSON.stringify({ success: true, data: { game: fakeGame } })
-					)
-				);
+		render(<EmulatorContent />);
 
-			render(<EmulatorContent />);
-
-			// should show the COEP/COOP warning instead of iframe
-			expect(
-				await screen.findByText(/Cannot run this game on this origin/i)
-			).toBeInTheDocument();
-		} finally {
-			// restore
-			(global as any).SharedArrayBuffer = origSAB;
-		}
+		const iframe = await screen.findByTitle(/GBA Game - EmulatorJS/i);
+		expect(iframe).toBeInTheDocument();
+		const src = (iframe as HTMLIFrameElement).getAttribute("src") || "";
+		expect(src).toContain("system=gba");
+		expect(src).toContain("core=gba");
 	});
 
 	test("shows error UI when API returns failure", async () => {

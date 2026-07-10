@@ -49,18 +49,9 @@ export interface CreateProfileRequest {
 export type EmulatorSystem =
 	| "nes" // Nintendo Entertainment System (FCEUmm core)
 	| "snes" // Super Nintendo (Snes9x core)
-	| "gb" // Game Boy (Gambatte core)
+	| "gb" // Game Boy / Game Boy Color (Gambatte core)
 	| "gba" // Game Boy Advance (mGBA core)
-	| "n64" // Nintendo 64 (Mupen64Plus core)
-	| "nds" // Nintendo DS (DeSmuME core)
-	| "segaMD" // Sega Genesis/Mega Drive (Genesis Plus GX)
-	| "segaMS" // Sega Master System
-	| "segaGG" // Sega Game Gear
-	| "segaCD" // Sega CD
-	| "psx" // PlayStation 1 (PCSX ReARMed) - Note: Large games may crash browsers
-	| "psp" // PlayStation Portable (PPSSPP core)
-	| "atari2600" // Atari 2600
-	| "arcade"; // Arcade (MAME core)
+	| "n64"; // Nintendo 64 (Mupen64Plus core)
 
 /**
  * Represents a game ROM in the library.

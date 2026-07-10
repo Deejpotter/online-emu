@@ -146,14 +146,9 @@ export default function Home() {
 								<div className="grid grid-cols-2 gap-1 text-xs text-zinc-400">
 									<span>• NES / Famicom</span>
 									<span>• SNES</span>
-									<span>• Game Boy</span>
+									<span>• Game Boy / Color</span>
 									<span>• GBA</span>
 									<span>• N64</span>
-									<span>• Nintendo DS</span>
-									<span>• Sega Genesis</span>
-									<span>• PlayStation</span>
-									<span>• PSP</span>
-									<span>• Arcade</span>
 								</div>
 							</div>
 						</div>

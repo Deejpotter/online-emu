@@ -39,15 +39,6 @@ const SYSTEM_EXTENSIONS: Record<EmulatorSystem, string[]> = {
 	gb: [".gb", ".gbc", ".zip"],
 	gba: [".gba", ".zip"],
 	n64: [".n64", ".z64", ".v64", ".zip"],
-	nds: [".nds", ".zip"],
-	segaMD: [".md", ".gen", ".bin", ".zip"],
-	segaMS: [".sms", ".zip"],
-	segaGG: [".gg", ".zip"],
-	segaCD: [".iso", ".bin", ".cue", ".zip"],
-	psx: [".bin", ".iso", ".cue", ".img", ".zip", ".pbp"],
-	psp: [".iso", ".cso", ".zip", ".pbp", ".7z"],
-	atari2600: [".a26", ".bin", ".zip"],
-	arcade: [".zip"],
 };
 
 /**
@@ -70,35 +61,6 @@ const FOLDER_TO_SYSTEM: Record<string, EmulatorSystem> = {
 	"game boy advance": "gba",
 	n64: "n64",
 	"nintendo 64": "n64",
-	ds: "nds",
-	nds: "nds",
-	"nintendo ds": "nds",
-	// Sega
-	genesis: "segaMD",
-	"mega drive": "segaMD",
-	segamd: "segaMD",
-	md: "segaMD",
-	sms: "segaMS",
-	"master system": "segaMS",
-	segams: "segaMS",
-	gg: "segaGG",
-	gamegear: "segaGG",
-	"game gear": "segaGG",
-	segagg: "segaGG",
-	segacd: "segaCD",
-	"sega cd": "segaCD",
-	// PlayStation
-	psx: "psx",
-	ps1: "psx",
-	playstation: "psx",
-	psp: "psp",
-	"playstation portable": "psp",
-	// Atari
-	atari2600: "atari2600",
-	"atari 2600": "atari2600",
-	// Arcade
-	arcade: "arcade",
-	mame: "arcade",
 };
 
 export const SYSTEM_NAMES: Record<EmulatorSystem, string> = {
@@ -107,15 +69,6 @@ export const SYSTEM_NAMES: Record<EmulatorSystem, string> = {
 	gb: "Game Boy / Color",
 	gba: "Game Boy Advance",
 	n64: "Nintendo 64",
-	nds: "Nintendo DS",
-	segaMD: "Sega Genesis / Mega Drive",
-	segaMS: "Sega Master System",
-	segaGG: "Sega Game Gear",
-	segaCD: "Sega CD",
-	psx: "PlayStation",
-	psp: "PlayStation Portable",
-	atari2600: "Atari 2600",
-	arcade: "Arcade (MAME)",
 };
 
 /**

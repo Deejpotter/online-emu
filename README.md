@@ -81,11 +81,9 @@ The app scans this directory automatically on startup.
 public/roms/
   nes/
   snes/
+  gb/
   gba/
   n64/
-  psx/
-  psp/
-  genesis/
 ```
 
 ## Project Structure
@@ -134,9 +132,6 @@ Based on typical ROM sizes for a retro collection:
 | GB/GBC | 32 KB - 2 MB | ~100 MB |
 | GBA | 4-32 MB | ~1.5 GB |
 | N64 | 8-64 MB | ~3 GB |
-| Genesis | 512 KB - 4 MB | ~150 MB |
-| PSX | 300-700 MB | ~35 GB |
-| PSP | 500 MB - 1.5 GB | ~80 GB |
 
 Your local PC storage determines capacity — no VPS required.
 

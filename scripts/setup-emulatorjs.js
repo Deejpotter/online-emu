@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env node
+#!/usr/bin/env node
 
 /**
  * EmulatorJS Setup Script
@@ -66,11 +66,6 @@ const CORE_REPORT_FILES = [
   "cores/reports/gambatte.json",
   "cores/reports/mgba.json",
   "cores/reports/mupen64plus_next.json",
-  "cores/reports/genesis_plus_gx.json",
-  "cores/reports/pcsx_rearmed.json",
-  "cores/reports/desmume2015.json",
-  "cores/reports/ppsspp.json",
-  "cores/reports/stella2014.json",
 ];
 
 /**
@@ -93,11 +88,6 @@ const CORES = [
   { system: "gb", core: "gambatte", name: "Game Boy - Gambatte" },
   { system: "gba", core: "mgba", name: "GBA - mGBA" },
   { system: "n64", core: "mupen64plus_next", name: "N64 - Mupen64Plus" },
-  { system: "segaMD", core: "genesis_plus_gx", name: "Genesis - Genesis Plus GX" },
-  { system: "psx", core: "pcsx_rearmed", name: "PlayStation - PCSX ReARMed" },
-  { system: "nds", core: "desmume2015", name: "Nintendo DS - DeSmuME" },
-  { system: "psp", core: "ppsspp", name: "PSP - PPSSPP" },
-  { system: "atari2600", core: "stella2014", name: "Atari 2600 - Stella" },
 ];
 
 /**
@@ -314,7 +304,7 @@ async function setup() {
   console.log("   You can now run: npm run dev");
   console.log("");
   console.log("   Add ROMs to your games folder:");
-  console.log("   Supported: NES, SNES, GB, GBA, N64, Genesis, PS1, DS, PSP");
+  console.log("   Supported: NES, SNES, GB, GBC, GBA, N64");
   console.log("");
 
   // Note about additional cores

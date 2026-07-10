@@ -12,7 +12,7 @@
 import { createServer } from "http";
 import { parse } from "url";
 import next from "next";
-import { initializeRomDirectory, scanForNewRoms } from "./src/lib/game-library";
+import { initializeRomDirectory, scanForNewRoms, ensureLibrary } from "./src/lib/index";
 import os from "os";
 
 // Environment configuration
@@ -52,7 +52,11 @@ async function main() {
 		await initializeRomDirectory();
 		console.log("[Server] ROM directory initialized");
 
-		// Scan for new ROMs
+		// Seed the library (from R2 when absent locally)
+		await ensureLibrary();
+		console.log("[Server] Library ready");
+
+		// Scan for new ROMs (no-op on Coolify where ROMs live in R2)
 		const { added, total } = await scanForNewRoms();
 		console.log(`[Server] Found ${total} games (${added} new)`);
 

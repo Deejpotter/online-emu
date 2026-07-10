@@ -55,7 +55,7 @@ const BUCKET = process.env.R2_BUCKET_NAME || "deejpotter";
 const R2_PREFIX = "roms/"; // All ROMs stored under this prefix
 
 // Systems to upload (small, browser-relevant)
-const DEFAULT_SYSTEMS = ["gba", "gb", "nes", "snes"];
+const DEFAULT_SYSTEMS = ["nes", "snes", "gb", "gba", "n64"];
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
