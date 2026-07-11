@@ -1,11 +1,15 @@
 #!/usr/bin/env node
-// Uploads data/metadata.json to R2 as library/manifest.json
+// Uploads data/metadata.json to R2 as library/manifest.json so a fresh
+// Coolify container can bootstrap its game library without local ROMs.
 
 const fs = require("fs");
 const path = require("path");
-const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
+const {
+  S3Client,
+  PutObjectCommand,
+} = require("@aws-sdk/client-s3");
 
-// Load .env manually (no dotenv dependency)
+// Load .env manually
 const envPath = path.join(__dirname, "..", ".env");
 if (fs.existsSync(envPath)) {
   for (const line of fs.readFileSync(envPath, "utf8").split("\n")) {
@@ -19,7 +23,7 @@ if (fs.existsSync(envPath)) {
   }
 }
 
-const client = new S3Client({
+const R2 = new S3Client({
   region: "auto",
   endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
   credentials: {
@@ -28,28 +32,26 @@ const client = new S3Client({
   },
 });
 const BUCKET = process.env.R2_BUCKET_NAME || "deejpotter";
+const LOCAL = path.join(__dirname, "..", "data", "metadata.json");
+const KEY = "library/manifest.json";
 
-const metaPath = path.join(__dirname, "..", "data", "metadata.json");
-if (!fs.existsSync(metaPath)) {
-  console.error("metadata.json not found — run a scan/prune first");
+if (!fs.existsSync(LOCAL)) {
+  console.error("metadata.json not found at", LOCAL);
   process.exit(1);
 }
 
 (async () => {
-  const body = fs.readFileSync(metaPath);
-  await client.send(
+  const body = fs.readFileSync(LOCAL);
+  await R2.send(
     new PutObjectCommand({
       Bucket: BUCKET,
-      Key: "library/manifest.json",
+      Key: KEY,
       Body: body,
       "Content-Type": "application/json",
     })
   );
-  const games = JSON.parse(body.toString()).games.length;
-  console.log(
-    `✅ Uploaded library manifest (${games} games) to ${BUCKET}/library/manifest.json`
-  );
+  console.log(`Uploaded ${body.length} bytes -> ${BUCKET}/${KEY}`);
 })().catch((e) => {
-  console.error(e);
+  console.error("FATAL", e);
   process.exit(1);
 });
