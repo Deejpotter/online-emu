@@ -1,0 +1,12 @@
+.next
+node_modules
+.git
+.github
+data
+.env
+.env.*
+!.env.example
+*.md
+.hermes
+coverage
+.cursor

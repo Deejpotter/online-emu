@@ -2,7 +2,7 @@
 
 Self-hosted retro game emulator powered by EmulatorJS. Play classic console games in your browser with support for save states, profiles, and PWA installation.
 
-**Live at:** https://roms.deejpotter.com (via Cloudflare Tunnel, runs on DESKTOP-UBV27I5)
+**Live at:** https://roms.deejpotter.com (Coolify container on DESKTOP-UBV27I5, Cloudflare coolify tunnel, R2-backed library)
 
 ## Features
 
@@ -16,9 +16,43 @@ Self-hosted retro game emulator powered by EmulatorJS. Play classic console game
 
 ## Deployment Options
 
-### Option A: Local PC + Cloudflare Tunnel (current production)
+### Option A: Coolify + Cloudflare R2 (current production)
 
-Runs on **DESKTOP-UBV27I5** (Windows) at `roms.deejpotter.com` via Cloudflare Tunnel.
+Production runs at `roms.deejpotter.com` as a **Docker Compose stack** (app + Postgres) on the Coolify network. ROMs, library, and saves are in Cloudflare R2; profiles are in Postgres.
+
+```bash
+# One-time: upload ROMs and manifest to R2
+yarn scan:library
+yarn upload:roms
+yarn upload:manifest
+yarn verify:r2
+```
+
+Deploy via Coolify UI (Docker Compose build pack) or:
+
+```bash
+bash scripts/deploy-coolify-docker.sh
+```
+
+Full guide: [docs/COOLIFY.md](docs/COOLIFY.md)
+
+Key env vars (`.env.coolify`):
+
+```
+LIBRARY_SOURCE=r2
+SAVE_STORAGE=r2
+PROFILE_STORAGE=postgres
+POSTGRES_PASSWORD=...
+R2_ACCOUNT_ID=...
+R2_ACCESS_KEY_ID=...
+R2_SECRET_ACCESS_KEY=...
+R2_BUCKET_NAME=deejpotter
+PORT=80
+```
+
+### Option B: Local PC + PM2 (legacy / dev)
+
+For local-only development with disk-scanned ROMs:
 
 ```bash
 yarn install
@@ -35,34 +69,7 @@ DATA_DIR=./data
 PORT=3100
 ```
 
-ROMs are scanned from `GAMES_DIR` on startup. See [Cloudflare Tunnel setup](#2-cloudflare-tunnel) below.
-
-### Option B: Coolify + Cloudflare R2
-
-Stateless container deployment — ROMs and the game library live in R2; saves/profiles persist on a `/data` volume.
-
-```bash
-# One-time: upload ROMs and manifest to R2
-yarn scan:library
-yarn upload:roms
-yarn upload:manifest
-yarn verify:r2
-```
-
-Full guide: [docs/COOLIFY.md](docs/COOLIFY.md)
-
-Key env vars for Coolify:
-
-```
-LIBRARY_SOURCE=r2
-DATA_DIR=/data
-GAMES_DIR=/data/games
-R2_ACCOUNT_ID=...
-R2_ACCESS_KEY_ID=...
-R2_SECRET_ACCESS_KEY=...
-R2_BUCKET_NAME=deejpotter
-PORT=80
-```
+ROMs are scanned from `GAMES_DIR` on startup. PM2 is no longer the primary production host — stop `onlineemu` if it conflicts with the Coolify route.
 
 ## Quick Start
 
@@ -80,61 +87,37 @@ Notes:
 - `yarn dev:next` is the recommended, fast dev workflow. It starts the Next.js app directly.
 - For production-like behaviour (server initialization, ROM scan), run `yarn build && yarn start`.
 
-### Production Deployment (Local PC via Cloudflare Tunnel)
+### Production Deployment (Coolify)
 
-This project runs on **DESKTOP-UBV27I5** (Windows) and is exposed publicly via Cloudflare Tunnel at `roms.deejpotter.com`.
+Production on **DESKTOP-UBV27I5** is served by a Coolify-managed Docker container at `roms.deejpotter.com` via the **coolify** Cloudflare tunnel (not the legacy krasus → PM2 route).
 
-#### 1. Build and start with PM2
+#### 1. Deploy
+
+Preferred: create/update the app in Coolify UI at `https://coolify.deejpotter.com` (Dockerfile build, `/data` volume, env vars above).
+
+Fallback when the Coolify API token is stale:
 
 ```bash
-yarn install
-yarn build
-pm2 start ecosystem.config.js   # Starts on port 3000
-pm2 save                         # Persist across reboots
-pm2 startup                      # Enable autostart
+bash scripts/deploy-coolify-docker.sh
 ```
 
 #### 2. Cloudflare Tunnel
 
-The tunnel is already configured. The relevant ingress rule in `~/.cloudflared/krasus-config.yml`:
+`roms.deejpotter.com` routes through the **coolify** tunnel to Traefik → container port 80. Remove any duplicate ingress for this hostname from the legacy `krasus` tunnel config.
 
-```yaml
-- hostname: roms.deejpotter.com
-  service: http://localhost:3100
-```
-
-Tunnel name: `krasus` (shared with other services). Restart the tunnel service after config changes:
+#### 3. Post-deploy verification
 
 ```bash
-# Check tunnel status
-cloudflared tunnel list
-
-# Restart tunnel service (Windows)
-Restart-Service cloudflared
+curl -s https://roms.deejpotter.com/api/status
+curl -s https://roms.deejpotter.com/api/systems   # expect 5 systems
+curl -I "https://roms.deejpotter.com/api/roms/GB/ROMs/4-in-1%20Fun%20Pak.zip"   # X-ROM-Source: r2
 ```
 
-#### 3. Cloudflare DNS
+See [.github/MANUAL-QA.md](.github/MANUAL-QA.md) for browser checks.
 
-Add a CNAME record in Cloudflare DNS:
-- **Name:** `roms`
-- **Target:** `<tunnel-id>.cfargotunnel.com`
-- **Proxy:** Enabled (orange cloud)
+#### 4. ROMs
 
-#### 4. ROMs (local deployment)
-
-Place ROM files under `GAMES_DIR` using the folder structure:
-
-```bash
-# Example: GAMES_DIR=H:\Games
-H:\Games\
-  NES\ROMs\
-  SNES\ROMs\
-  GB\ROMs\
-  GBA\ROMs\
-  N64\ROMs\
-```
-
-The app scans this directory on startup. For R2 deployment, use `yarn upload:roms` instead.
+ROMs and the library manifest live in Cloudflare R2 (3,744 games across 5 systems). Optional local fallback: bind-mount `H:\Games` (WSL: `/mnt/h/Games`) to `/data/games` when the external drive is connected.
 
 ## Project Structure
 

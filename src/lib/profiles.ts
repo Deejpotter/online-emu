@@ -1,14 +1,7 @@
 /**
  * Profile Storage Utilities
  *
- * Server-side CRUD operations for user profiles.
- * Profiles are stored in /data/profiles.json as a simple JSON array.
- *
- * Why file-based storage:
- * - No database setup required for hobby project
- * - Easy to backup, edit, and version control
- * - Profiles are rarely modified (only on create/delete)
- * - Works offline without any external dependencies
+ * Supports file-based storage (local dev) or Postgres (Coolify compose).
  */
 
 import { readFile, writeFile, mkdir } from "fs/promises";
@@ -16,36 +9,38 @@ import { existsSync } from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
 import type { Profile, CreateProfileRequest } from "@/types";
+import { getPool, isPostgresEnabled } from "./db";
 
-// Path to profiles storage file (relative to server root)
-const DATA_DIR = path.join(process.cwd(), "data");
+const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), "data");
 const PROFILES_FILE = path.join(DATA_DIR, "profiles.json");
 
-/**
- * Ensure the data directory exists.
- */
 async function ensureDataDir(): Promise<void> {
 	if (!existsSync(DATA_DIR)) {
 		await mkdir(DATA_DIR, { recursive: true });
 	}
 }
 
-/**
- * Read all profiles from storage.
- * Returns empty array if file doesn't exist.
- *
- * BOM-tolerant: strips the UTF-8 BOM (EF BB BF) that Windows tools like
- * PowerShell ConvertTo-Json and Notepad sometimes prepend to JSON files.
- * Without this, JSON.parse throws on the hidden \uFEFF character.
- */
-export async function getAllProfiles(): Promise<Profile[]> {
+function rowToProfile(row: {
+	id: string;
+	name: string;
+	avatar: string;
+	created_at: Date;
+}): Profile {
+	return {
+		id: row.id,
+		name: row.name,
+		avatar: row.avatar,
+		createdAt: row.created_at.toISOString(),
+	};
+}
+
+async function getAllProfilesFile(): Promise<Profile[]> {
 	try {
 		await ensureDataDir();
 		if (!existsSync(PROFILES_FILE)) {
 			return [];
 		}
 		const raw = await readFile(PROFILES_FILE, "utf-8");
-		// Strip UTF-8 BOM if present (char code 65279 / \uFEFF)
 		const data = raw.charCodeAt(0) === 0xfeff ? raw.slice(1) : raw;
 		return JSON.parse(data) as Profile[];
 	} catch (error) {
@@ -54,31 +49,62 @@ export async function getAllProfiles(): Promise<Profile[]> {
 	}
 }
 
-/**
- * Get a single profile by ID.
- * Returns null if not found.
- */
+async function getAllProfilesPostgres(): Promise<Profile[]> {
+	const result = await getPool().query(
+		"SELECT id, name, avatar, created_at FROM profiles ORDER BY created_at ASC"
+	);
+	return result.rows.map(rowToProfile);
+}
+
+export async function getAllProfiles(): Promise<Profile[]> {
+	if (isPostgresEnabled()) return getAllProfilesPostgres();
+	return getAllProfilesFile();
+}
+
 export async function getProfileById(id: string): Promise<Profile | null> {
-	const profiles = await getAllProfiles();
+	if (isPostgresEnabled()) {
+		const result = await getPool().query(
+			"SELECT id, name, avatar, created_at FROM profiles WHERE id = $1",
+			[id]
+		);
+		return result.rows[0] ? rowToProfile(result.rows[0]) : null;
+	}
+	const profiles = await getAllProfilesFile();
 	return profiles.find((p) => p.id === id) || null;
 }
 
-/**
- * Create a new profile.
- * Returns the created profile with generated ID and timestamp.
- */
 export async function createProfile(
 	data: CreateProfileRequest
 ): Promise<Profile> {
-	const profiles = await getAllProfiles();
-
-	// Validate name is not empty
 	const name = data.name.trim();
 	if (!name) {
 		throw new Error("Profile name cannot be empty");
 	}
 
-	// Check for duplicate names (case-insensitive)
+	if (isPostgresEnabled()) {
+		const existing = await getPool().query(
+			"SELECT id FROM profiles WHERE LOWER(name) = LOWER($1)",
+			[name]
+		);
+		if (existing.rows.length > 0) {
+			throw new Error("A profile with this name already exists");
+		}
+
+		const newProfile: Profile = {
+			id: randomUUID(),
+			name,
+			avatar: data.avatar || "👤",
+			createdAt: new Date().toISOString(),
+		};
+
+		await getPool().query(
+			"INSERT INTO profiles (id, name, avatar, created_at) VALUES ($1, $2, $3, $4)",
+			[newProfile.id, newProfile.name, newProfile.avatar, newProfile.createdAt]
+		);
+		return newProfile;
+	}
+
+	const profiles = await getAllProfilesFile();
 	const existingName = profiles.find(
 		(p) => p.name.toLowerCase() === name.toLowerCase()
 	);
@@ -94,53 +120,63 @@ export async function createProfile(
 	};
 
 	profiles.push(newProfile);
-	await saveProfiles(profiles);
-
+	await saveProfilesFile(profiles);
 	return newProfile;
 }
 
-/**
- * Delete a profile by ID.
- * Returns true if deleted, false if not found.
- *
- * Note: This does NOT delete save files associated with the profile.
- * Save files are kept in case the user wants to recover them later.
- */
 export async function deleteProfile(id: string): Promise<boolean> {
-	const profiles = await getAllProfiles();
-	const index = profiles.findIndex((p) => p.id === id);
-
-	if (index === -1) {
-		return false;
+	if (isPostgresEnabled()) {
+		const result = await getPool().query(
+			"DELETE FROM profiles WHERE id = $1 RETURNING id",
+			[id]
+		);
+		return result.rowCount !== null && result.rowCount > 0;
 	}
 
+	const profiles = await getAllProfilesFile();
+	const index = profiles.findIndex((p) => p.id === id);
+	if (index === -1) return false;
 	profiles.splice(index, 1);
-	await saveProfiles(profiles);
-
+	await saveProfilesFile(profiles);
 	return true;
 }
 
-/**
- * Update a profile's name or avatar.
- * Returns the updated profile, or null if not found.
- */
 export async function updateProfile(
 	id: string,
 	data: Partial<CreateProfileRequest>
 ): Promise<Profile | null> {
-	const profiles = await getAllProfiles();
-	const profile = profiles.find((p) => p.id === id);
+	if (isPostgresEnabled()) {
+		const current = await getProfileById(id);
+		if (!current) return null;
 
-	if (!profile) {
-		return null;
+		if (data.name) {
+			const name = data.name.trim();
+			if (!name) throw new Error("Profile name cannot be empty");
+			const dup = await getPool().query(
+				"SELECT id FROM profiles WHERE LOWER(name) = LOWER($1) AND id != $2",
+				[name, id]
+			);
+			if (dup.rows.length > 0) {
+				throw new Error("A profile with this name already exists");
+			}
+			current.name = name;
+		}
+		if (data.avatar) current.avatar = data.avatar;
+
+		await getPool().query(
+			"UPDATE profiles SET name = $1, avatar = $2 WHERE id = $3",
+			[current.name, current.avatar || "👤", id]
+		);
+		return current;
 	}
+
+	const profiles = await getAllProfilesFile();
+	const profile = profiles.find((p) => p.id === id);
+	if (!profile) return null;
 
 	if (data.name) {
 		const name = data.name.trim();
-		if (!name) {
-			throw new Error("Profile name cannot be empty");
-		}
-		// Check for duplicate names (excluding current profile)
+		if (!name) throw new Error("Profile name cannot be empty");
 		const existingName = profiles.find(
 			(p) => p.id !== id && p.name.toLowerCase() === name.toLowerCase()
 		);
@@ -149,19 +185,13 @@ export async function updateProfile(
 		}
 		profile.name = name;
 	}
+	if (data.avatar) profile.avatar = data.avatar;
 
-	if (data.avatar) {
-		profile.avatar = data.avatar;
-	}
-
-	await saveProfiles(profiles);
+	await saveProfilesFile(profiles);
 	return profile;
 }
 
-/**
- * Save profiles array to storage file.
- */
-async function saveProfiles(profiles: Profile[]): Promise<void> {
+async function saveProfilesFile(profiles: Profile[]): Promise<void> {
 	await ensureDataDir();
 	await writeFile(PROFILES_FILE, JSON.stringify(profiles, null, 2), "utf-8");
 }

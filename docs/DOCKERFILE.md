@@ -1,19 +1,27 @@
 # Dockerfile
 
-Self-contained Coolify build. Clones the public repo inside the image because Coolify's dockerfile build-context linking can be unreliable on some homelab setups.
+Production image for the Coolify Docker Compose stack. Uses the git build context from Coolify (or `docker compose build`) — no in-image git clone.
 
 ## Design choices
 
 | Choice | Reason |
 |--------|--------|
-| Git clone in build | Build succeeds even when Coolify's GitHub source linking is broken |
+| Build context `COPY . .` | Coolify GitHub App / local compose provide the repo |
 | `yarn --frozen-lockfile` | Reproducible installs matching `yarn.lock` |
-| Port 80 | Coolify Traefik load balancer targets port 80 for dockerfile apps |
-| `docker-entrypoint.sh` | Creates `/data`, runs server as root to bind port 80 |
+| Port 80 | Coolify Traefik load balancer targets port 80 |
+| `docker-entrypoint.sh` | Waits for Postgres, then runs `tsx server.ts` |
 | `LIBRARY_SOURCE=r2` | ROM-less container; library seeded from R2 manifest |
-| `COPY public/` | EmulatorJS WASM cores and static assets included in image |
+| `SAVE_STORAGE=r2` | Save states and SRM in R2 |
+| `PROFILE_STORAGE=postgres` | Profiles in compose Postgres service |
 
 ## Build locally
+
+```bash
+docker compose build
+docker compose --env-file .env.coolify up -d
+```
+
+Or single-container smoke test:
 
 ```bash
 docker build -t online-emu .
@@ -23,16 +31,17 @@ docker run -p 8080:80 \
   -e R2_SECRET_ACCESS_KEY=... \
   -e R2_BUCKET_NAME=deejpotter \
   -e LIBRARY_SOURCE=r2 \
-  -v online-emu-data:/data \
+  -e SAVE_STORAGE=local \
+  -e PROFILE_STORAGE=file \
   online-emu
 ```
 
 Open http://localhost:8080
 
-## Pin a release
+## Compose stack
 
-Change the clone branch or tag in the `git clone` line when deploying a specific version:
+See [docker-compose.yml](../docker-compose.yml) — `app` + `postgres` services. Production deploy:
 
-```dockerfile
-RUN git clone --depth 1 --branch v1.0.0 https://github.com/Deejpotter/online-emu.git .
+```bash
+bash scripts/deploy-coolify-docker.sh
 ```

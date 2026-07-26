@@ -1,0 +1,27 @@
+# Coolify manual deploy overlay — Traefik routing on the coolify network (no host port 80 bind).
+# Usage: docker compose -f docker-compose.yml -f docker-compose.coolify.yml up -d --build
+services:
+  app:
+    networks:
+      - coolify
+      - default
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=coolify
+      - traefik.http.middlewares.gzip.compress=true
+      - traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https
+      - traefik.http.routers.online-emu-http.entryPoints=http
+      - traefik.http.routers.online-emu-http.middlewares=redirect-to-https
+      - traefik.http.routers.online-emu-http.rule=(Host(`roms.deejpotter.com`) || Host(`emu.deejpotter.com`)) && PathPrefix(`/`)
+      - traefik.http.routers.online-emu-http.service=online-emu
+      - traefik.http.routers.online-emu-https.entryPoints=https
+      - traefik.http.routers.online-emu-https.middlewares=gzip
+      - traefik.http.routers.online-emu-https.rule=(Host(`roms.deejpotter.com`) || Host(`emu.deejpotter.com`)) && PathPrefix(`/`)
+      - traefik.http.routers.online-emu-https.service=online-emu
+      - traefik.http.routers.online-emu-https.tls=true
+      - traefik.http.routers.online-emu-https.tls.certresolver=letsencrypt
+      - traefik.http.services.online-emu.loadbalancer.server.port=80
+
+networks:
+  coolify:
+    external: true

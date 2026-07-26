@@ -1,13 +1,10 @@
 # Online Emulator - Development TODOs
 
-## Current Phase: Dual Deployment (Local PC + Coolify/R2)
+## Current Phase: Coolify Compose + R2 + Postgres
 
-**Goal**: Support two production paths:
+**Goal**: Production at `roms.deejpotter.com` runs as Docker Compose (app + Postgres) on Coolify. R2 for ROMs/library/saves; Postgres for profiles.
 
-1. **Local PC + Cloudflare Tunnel** — `roms.deejpotter.com` via PM2 on DESKTOP-UBV27I5 (`LIBRARY_SOURCE=local`, `GAMES_DIR=H:\Games`)
-2. **Coolify + R2** — stateless container, ROMs/library from Cloudflare R2 ([docs/COOLIFY.md](../docs/COOLIFY.md))
-
-**Note**: Vultr VPS plan archived. Coolify/R2 code is on `main` (Dockerfile, `library-source.ts`, upload scripts).
+**Legacy:** PM2 + krasus tunnel — local dev only.
 
 ---
 
@@ -20,7 +17,7 @@
 
 ---
 
-## 📋 Local PC + Cloudflare Tunnel Deployment
+## 📋 Local PC + Cloudflare Tunnel Deployment (Legacy)
 
 ### ✅ Step 1: Build
 - ✅ 1.1: `yarn install` — dependencies installed
@@ -54,17 +51,19 @@
 
 ---
 
-## ✅ Coolify + R2 Deployment (Code Complete)
+## ✅ Coolify Compose Production (2026-07-26)
 
-Operational steps documented in [docs/COOLIFY.md](../docs/COOLIFY.md).
-
-- ✅ R2 manifest populated (3744 games, 5 systems)
-- ✅ `scripts/seed-library-from-r2.js`, `scan-library.js`, `verify-r2-flow.js`
-- ✅ `/api/roms/[...path]` — R2 first, local fallback
-- ✅ Dockerfile uses `yarn --frozen-lockfile`, port 80, `/data` volume paths
-- ✅ GitHub Actions CI (`.github/workflows/ci.yml`)
-- ⬜ Coolify app created and domain attached (manual in Coolify UI)
-- ⬜ Post-deploy browser verification — per MANUAL-QA
+- ✅ `docker-compose.yml` — app + Postgres
+- ✅ `docker-compose.coolify.yml` — Traefik labels + coolify network
+- ✅ Dockerfile uses build context (no git clone)
+- ✅ Profiles in Postgres (`PROFILE_STORAGE=postgres`)
+- ✅ Saves/SRM in R2 (`SAVE_STORAGE=r2`, `X-Save-Source: r2`)
+- ✅ Migration scripts: `migrate-profiles-to-postgres.js`, `migrate-saves-to-r2.js`
+- ✅ Deployed via `scripts/deploy-coolify-docker.sh`
+- ✅ API smoke: status, 5 systems, `X-ROM-Source: r2`, profile create, save to R2
+- ✅ 66 unit tests passing (including `save-storage.test.ts`)
+- ⬜ Coolify UI Docker Compose app (manual — using WSL deploy script)
+- ⬜ Browser QA iframe items — per MANUAL-QA
 
 ---
 

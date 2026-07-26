@@ -13,6 +13,7 @@ import { createServer } from "http";
 import { parse } from "url";
 import next from "next";
 import { initializeRomDirectory, scanForNewRoms, ensureLibrary } from "./src/lib/index";
+import { runMigrations } from "./src/lib/db";
 import os from "os";
 
 // Environment configuration
@@ -47,6 +48,10 @@ async function main() {
 		// Prepare Next.js
 		await app.prepare();
 		console.log("[Server] Next.js prepared");
+
+		// Apply Postgres schema when PROFILE_STORAGE=postgres
+		await runMigrations();
+		console.log("[Server] Database ready");
 
 		// Seed the library from R2 before local init creates an empty manifest
 		await ensureLibrary();
