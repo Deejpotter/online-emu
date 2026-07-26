@@ -55,5 +55,5 @@ logs/
 # cloudflare wrangler cache
 .wrangler/
 
-# roms symlink/placeholder
-roms
+# roms symlink/placeholder at repo root (not src/app/api/roms)
+/roms

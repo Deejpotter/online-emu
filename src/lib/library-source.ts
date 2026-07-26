@@ -8,41 +8,12 @@
 
 import fs from "fs/promises";
 import path from "path";
-import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
+import { GetObjectCommand } from "@aws-sdk/client-s3";
+import { getR2Client, getR2Bucket, streamToBuffer } from "./r2-client";
 
 const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), "data");
 const METADATA_PATH = path.join(DATA_DIR, "metadata.json");
 const MANIFEST_KEY = "library/manifest.json";
-
-function getR2Client(): S3Client | null {
-	const { R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY } = process.env;
-	if (!R2_ACCOUNT_ID || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY) return null;
-	return new S3Client({
-		region: "auto",
-		endpoint: `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-		credentials: {
-			accessKeyId: R2_ACCESS_KEY_ID,
-			secretAccessKey: R2_SECRET_ACCESS_KEY,
-		},
-	});
-}
-
-async function streamToBuffer(body: any): Promise<Buffer> {
-	const chunks: Uint8Array[] = [];
-	const reader = body.transformToWebStream().getReader();
-	for (;;) {
-		const { done, value } = await reader.read();
-		if (done) break;
-		chunks.push(value);
-	}
-	const buf = Buffer.alloc(chunks.reduce((a, c) => a + c.length, 0));
-	let off = 0;
-	for (const c of chunks) {
-		buf.set(c, off);
-		off += c.length;
-	}
-	return buf;
-}
 
 /**
  * Ensure a library manifest exists locally.
@@ -60,7 +31,7 @@ export async function ensureLibrary(): Promise<void> {
 
 	if (process.env.LIBRARY_SOURCE === "r2") {
 		const client = getR2Client();
-		const bucket = process.env.R2_BUCKET_NAME || "deejpotter";
+		const bucket = getR2Bucket();
 		if (client) {
 			try {
 				const res = await client.send(
@@ -71,8 +42,9 @@ export async function ensureLibrary(): Promise<void> {
 					console.log("[Library] Seeded metadata.json from R2");
 					return;
 				}
-			} catch (e: any) {
-				console.warn("[Library] R2 manifest fetch failed:", e.message);
+			} catch (e: unknown) {
+				const message = e instanceof Error ? e.message : String(e);
+				console.warn("[Library] R2 manifest fetch failed:", message);
 			}
 		}
 	}

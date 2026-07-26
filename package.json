@@ -14,6 +14,11 @@
     "test:watch": "jest --watch",
     "lint": "eslint",
     "setup": "node scripts/setup-emulatorjs.js",
+    "scan:library": "node scripts/scan-library.js",
+    "seed:library": "node scripts/seed-library-from-r2.js",
+    "upload:roms": "node scripts/upload-to-r2.js",
+    "upload:manifest": "node scripts/upload-manifest.js",
+    "verify:r2": "node scripts/verify-r2-flow.js --local",
     "clean": "rm -rf .next node_modules/.cache"
   },
   "dependencies": {

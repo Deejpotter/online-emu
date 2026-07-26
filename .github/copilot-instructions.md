@@ -319,9 +319,7 @@ window.parent.postMessage({ type: "ready", canvas: canvasElement }, "*");
 - **User Profiles**: Simple local profiles (no authentication required)
 - **Emulation**: EmulatorJS (self-hosted, runs in iframe, WebAssembly cores)
 - **PWA**: Service worker for offline support, installable on all devices
-- **Deployment**: Vultr VPS (Standard plan: $12/mo, 80GB SSD, 4GB RAM)
-- **Process Manager**: PM2 for production process management
-- **Reverse Proxy**: Nginx (recommended for SSL/domain routing)
+- **Deployment**: Local PC + PM2 + Cloudflare Tunnel, or Coolify + R2 (see [docs/COOLIFY.md](../docs/COOLIFY.md))
 
 ## Supported Systems
 
@@ -329,20 +327,13 @@ All systems use EmulatorJS browser-based cores. **PS2 and GameCube are NOT suppo
 
 | System             | Core            | Extensions            |
 | ------------------ | --------------- | --------------------- |
-| NES                | FCEUmm          | .nes, .fds            |
-| SNES               | Snes9x          | .sfc, .smc            |
-| Game Boy / Color   | Gambatte        | .gb, .gbc             |
-| Game Boy Advance   | mGBA            | .gba                  |
-| N64                | Mupen64Plus     | .n64, .z64, .v64      |
-| Nintendo DS        | DeSmuME         | .nds                  |
-| PlayStation        | PCSX ReARMed    | .bin/.cue, .iso, .chd |
-| PSP                | PPSSPP          | .iso, .cso            |
-| Sega Genesis       | Genesis Plus GX | .md, .bin, .gen       |
-| Sega Master System | Genesis Plus GX | .sms                  |
-| Sega Game Gear     | Genesis Plus GX | .gg                   |
-| Sega CD            | Genesis Plus GX | .bin/.cue, .iso       |
-| Atari 2600         | Stella          | .a26, .bin            |
-| Arcade             | MAME 2003 Plus  | .zip                  |
+| NES                | FCEUmm          | .nes, .fds, .zip      |
+| SNES               | Snes9x          | .sfc, .smc, .zip      |
+| Game Boy / Color   | Gambatte        | .gb, .gbc, .zip       |
+| Game Boy Advance   | mGBA            | .gba, .zip            |
+| N64                | Mupen64Plus     | .n64, .z64, .v64, .zip |
+
+ROMs are served via `/api/roms/...` (R2 first, local `GAMES_DIR` fallback). The game library is in `data/metadata.json`, seeded from R2 when `LIBRARY_SOURCE=r2`.
 
 ## User Profiles
 

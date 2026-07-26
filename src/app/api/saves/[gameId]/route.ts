@@ -12,7 +12,7 @@
  *   gameId - The game name (same as EJS_gameName, URL-decoded)
  *
  * Query Parameters:
- *   system - The emulator system (e.g., 'n64', 'psx') - required for locating save dir
+ *   system - The emulator system (e.g., 'n64', 'gba') - required for locating save dir
  *   slot   - Save slot number (default: 0 for quick save)
  *
  * Authentication:

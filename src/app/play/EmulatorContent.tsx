@@ -24,10 +24,6 @@
  * - Joystick-first input mapping: left-analog mapped to Dâ€‘pad by default to
  *   support common controllers where Dâ€‘pad may be unreliable â€” improves UX
  *   across real devices.
- *
- * Security & threading note:
- * - Some cores (PSP) require SharedArrayBuffer and COEP/COOP headers; the
- *   component explicitly checks availability and shows actionable guidance.
  */
 
 "use client";
@@ -446,8 +442,9 @@ export function EmulatorContent() {
 							onClick={() => setShowControls(!showControls)}
 							className="md:hidden px-3 py-2 text-xs bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors min-h-[44px]"
 							title={showControls ? "Hide controls" : "Show controls"}
+							aria-label={showControls ? "Hide controls" : "Show controls"}
 						>
-							{showControls ? "â–²" : "â–¼"}
+							{showControls ? "▲" : "▼"}
 						</button>
 					</div>
 				</div>

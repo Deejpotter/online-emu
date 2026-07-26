@@ -14,6 +14,56 @@ Self-hosted retro game emulator powered by EmulatorJS. Play classic console game
 - **Offline-Ready** - Service worker caches games and assets for offline play
 - **Self-Hosted** - Complete control over your data, no external dependencies
 
+## Deployment Options
+
+### Option A: Local PC + Cloudflare Tunnel (current production)
+
+Runs on **DESKTOP-UBV27I5** (Windows) at `roms.deejpotter.com` via Cloudflare Tunnel.
+
+```bash
+yarn install
+yarn build
+pm2 start ecosystem.config.js   # Port 3100
+```
+
+Set in `.env`:
+
+```
+GAMES_DIR=H:\Games
+LIBRARY_SOURCE=local
+DATA_DIR=./data
+PORT=3100
+```
+
+ROMs are scanned from `GAMES_DIR` on startup. See [Cloudflare Tunnel setup](#2-cloudflare-tunnel) below.
+
+### Option B: Coolify + Cloudflare R2
+
+Stateless container deployment — ROMs and the game library live in R2; saves/profiles persist on a `/data` volume.
+
+```bash
+# One-time: upload ROMs and manifest to R2
+yarn scan:library
+yarn upload:roms
+yarn upload:manifest
+yarn verify:r2
+```
+
+Full guide: [docs/COOLIFY.md](docs/COOLIFY.md)
+
+Key env vars for Coolify:
+
+```
+LIBRARY_SOURCE=r2
+DATA_DIR=/data
+GAMES_DIR=/data/games
+R2_ACCOUNT_ID=...
+R2_ACCESS_KEY_ID=...
+R2_SECRET_ACCESS_KEY=...
+R2_BUCKET_NAME=deejpotter
+PORT=80
+```
+
 ## Quick Start
 
 ### Local Development
@@ -70,21 +120,21 @@ Add a CNAME record in Cloudflare DNS:
 - **Target:** `<tunnel-id>.cfargotunnel.com`
 - **Proxy:** Enabled (orange cloud)
 
-#### 4. ROMs
+#### 4. ROMs (local deployment)
 
-Place ROM files in `public/roms/{system}/` — e.g. `public/roms/nes/`, `public/roms/snes/`, etc.
-
-The app scans this directory automatically on startup.
+Place ROM files under `GAMES_DIR` using the folder structure:
 
 ```bash
-# ROM directory structure
-public/roms/
-  nes/
-  snes/
-  gb/
-  gba/
-  n64/
+# Example: GAMES_DIR=H:\Games
+H:\Games\
+  NES\ROMs\
+  SNES\ROMs\
+  GB\ROMs\
+  GBA\ROMs\
+  N64\ROMs\
 ```
+
+The app scans this directory on startup. For R2 deployment, use `yarn upload:roms` instead.
 
 ## Project Structure
 
@@ -96,12 +146,15 @@ online-emu/
 │   │   │   ├── profiles/      # Profile CRUD
 │   │   │   ├── saves/         # Save state storage
 │   │   │   ├── srm/           # In-game saves
+│   │   │   ├── roms/          # ROM streaming (R2 + local fallback)
 │   │   │   └── games/         # ROM library
 │   │   ├── play/      # Emulator page (iframe wrapper)
 │   │   └── profiles/  # Profile selection UI
 │   ├── lib/           # Utilities
 │   │   ├── profiles.ts        # Profile management
-│   │   └── game-library.ts    # ROM scanning
+│   │   ├── game-library.ts    # ROM scanning
+│   │   ├── library-source.ts  # R2 library seeding
+│   │   └── r2-client.ts       # Shared R2 helpers
 │   ├── middleware.ts          # Profile auth check
 │   └── types/         # TypeScript definitions
 ├── public/
@@ -112,7 +165,16 @@ online-emu/
 ├── data/              # App data (auto-created)
 │   ├── profiles.json       # User profiles
 │   └── metadata.json       # Game metadata cache
-├── scripts/           # Setup scripts
+├── scripts/           # Setup + R2 upload scripts
+│   ├── setup-emulatorjs.js
+│   ├── scan-library.js
+│   ├── seed-library-from-r2.js
+│   ├── upload-to-r2.js
+│   ├── upload-manifest.js
+│   └── verify-r2-flow.js
+├── docs/
+│   ├── COOLIFY.md          # Coolify deployment guide
+│   └── DOCKERFILE.md       # Docker build notes
 ├── ecosystem.config.js     # PM2 configuration
 ├── server.ts          # Custom Next.js server
 └── .github/
@@ -161,7 +223,7 @@ Communication between React and EmulatorJS uses `postMessage`.
 
 ## Development
 
-See [.github/todos.md](.github/todos.md) for current development status and roadmap.
+See [.github/todos.md](.github/todos.md) for progress and [.github/MANUAL-QA.md](.github/MANUAL-QA.md) for browser verification steps.
 
 ## Legal Notice
 

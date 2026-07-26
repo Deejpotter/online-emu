@@ -7,7 +7,8 @@ describe("game-library scan & initialization (filesystem integration)", () => {
 	const tmpRoot = path.join(os.tmpdir(), `online-emu-test-${Date.now()}`);
 	const nesFolder = path.join(tmpRoot, "nes");
 	const romsSub = path.join(nesFolder, "ROMs");
-	const metadataPath = path.join(process.cwd(), "data", "metadata.json");
+	const dataDir = path.join(tmpRoot, "data");
+	const metadataPath = path.join(dataDir, "metadata.json");
 
 	const unique = Date.now().toString(36);
 	const testRomA = `test_game-${unique} (USA).nes`;
@@ -21,6 +22,7 @@ describe("game-library scan & initialization (filesystem integration)", () => {
 
 		// point module at our temp games dir
 		process.env.GAMES_DIR = tmpRoot;
+		process.env.DATA_DIR = dataDir;
 		jest.resetModules();
 	});
 
@@ -44,8 +46,9 @@ describe("game-library scan & initialization (filesystem integration)", () => {
 			// ignore
 		}
 
-		// restore GAMES_DIR
+		// restore env
 		delete process.env.GAMES_DIR;
+		delete process.env.DATA_DIR;
 		jest.resetModules();
 	});
 

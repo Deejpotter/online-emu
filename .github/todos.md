@@ -1,17 +1,13 @@
 # Online Emulator - Development TODOs
 
-## Current Phase: Local PC + Cloudflare Tunnel Deployment
+## Current Phase: Dual Deployment (Local PC + Coolify/R2)
 
-**Goal**: Run online-emu on DESKTOP-UBV27I5 (Windows, local PC) and expose it publicly at `roms.deejpotter.com` via the existing Cloudflare Tunnel (`krasus`).
+**Goal**: Support two production paths:
 
-**Why**:
+1. **Local PC + Cloudflare Tunnel** — `roms.deejpotter.com` via PM2 on DESKTOP-UBV27I5 (`LIBRARY_SOURCE=local`, `GAMES_DIR=H:\Games`)
+2. **Coolify + R2** — stateless container, ROMs/library from Cloudflare R2 ([docs/COOLIFY.md](../docs/COOLIFY.md))
 
-- Local PC has plenty of storage for ROMs — no VPS cost
-- Cloudflare Tunnel already set up and working for other services (krasus, tasks)
-- Same pattern as other self-hosted apps (consistent, easy to manage)
-- PM2 handles autostart on Windows boot
-
-**Note**: Vultr VPS deployment plan archived — no longer needed. Docker/Coolify work archived in branch `archive/coolify-docker-attempt`.
+**Note**: Vultr VPS plan archived. Coolify/R2 code is on `main` (Dockerfile, `library-source.ts`, upload scripts).
 
 ---
 
@@ -51,10 +47,24 @@
 ### ✅ Step 5: Testing & Verification
 - ✅ 5.1: Profile creation works
 - ✅ 5.2: Games load and run (GBA confirmed, Fire Red and Leaf Green)
-- ⬜ 5.3: Auto-save state (every 60s) — verify in PM2 logs
-- ⬜ 5.4: Auto-load save state on game start — verify position is restored
+- ⬜ 5.3: Auto-save state (every 60s) — verify per [.github/MANUAL-QA.md](MANUAL-QA.md)
+- ⬜ 5.4: Auto-load save state on game start — verify per MANUAL-QA
 - ✅ 5.4b: SRM (in-game saves) save and load — confirmed working in PM2 logs
-- ⬜ 5.5: Verify PWA installable on mobile
+- ⬜ 5.5: Verify PWA installable on mobile — per MANUAL-QA
+
+---
+
+## ✅ Coolify + R2 Deployment (Code Complete)
+
+Operational steps documented in [docs/COOLIFY.md](../docs/COOLIFY.md).
+
+- ✅ R2 manifest populated (3744 games, 5 systems)
+- ✅ `scripts/seed-library-from-r2.js`, `scan-library.js`, `verify-r2-flow.js`
+- ✅ `/api/roms/[...path]` — R2 first, local fallback
+- ✅ Dockerfile uses `yarn --frozen-lockfile`, port 80, `/data` volume paths
+- ✅ GitHub Actions CI (`.github/workflows/ci.yml`)
+- ⬜ Coolify app created and domain attached (manual in Coolify UI)
+- ⬜ Post-deploy browser verification — per MANUAL-QA
 
 ---
 
@@ -131,11 +141,7 @@ Three bugs reported when attempting to play a GBA game (Pokémon Leaf Green):
 **Logic**: Confirm all three reported bugs are resolved.
 
 **Sub-steps**:
-- ⬜ 5.1: Open DevTools console on a game page — confirm no "Translation not found" warnings
-- ⬜ 5.2: Open a GBA game — confirm no "Error downloading game state" banner
-- ⬜ 5.3: Confirm emulator loads and game starts (no black screen, no 30s timeout)
-- ⬜ 5.4: Confirm save/load still works (manual save state, in-game SRM)
-- ⬜ 5.5: Test with a fresh profile (no prior saves) to confirm new-game path is clean
+- ⬜ 5.1–5.5: Browser verification — see [.github/MANUAL-QA.md](MANUAL-QA.md)
 
 ---
 
@@ -212,16 +218,16 @@ Researched Play!, Sunshine/Moonlight, RetroArch web player. Decision: browser-on
 
 ---
 
-## ⬜ Testing: Expand automated test coverage
+## ✅ Testing: Automated test coverage
 
-Goal: Increase unit and integration coverage for critical flows (SRM, save-states, emulator iframe behavior, and game-library helpers).
+- ✅ SRM API edge tests (`src/app/api/srm/__tests__/srm-api.additional.test.ts`)
+- ✅ Save-state API edge tests (`src/app/api/saves/__tests__/saves-api.additional.test.ts`)
+- ✅ `EmulatorContent` component tests
+- ✅ `game-library` helper + scan tests
+- ✅ ROMs API tests (`src/app/api/roms/__tests__/roms-api.test.ts`)
+- ✅ CI workflow runs `yarn test` on PRs (`.github/workflows/ci.yml`)
 
-- ⬜ Add SRM API edge tests (missing params, empty body, path traversal, legacy save header)
-- ⬜ Add save-state API edge tests
-- ⬜ Add `EmulatorContent` component tests
-- ⬜ Add `game-library` helper tests
-- ⬜ Add CI workflow to run `yarn test` on PRs
-- ⬜ Run tests locally and fix failures until green
+Run locally: `yarn test && yarn lint && yarn build`
 
 ---
 

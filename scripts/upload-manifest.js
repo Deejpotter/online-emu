@@ -50,7 +50,8 @@ if (!fs.existsSync(LOCAL)) {
       "Content-Type": "application/json",
     })
   );
-  console.log(`Uploaded ${body.length} bytes -> ${BUCKET}/${KEY}`);
+  const count = JSON.parse(body.toString()).games?.length ?? 0;
+  console.log(`Uploaded ${count} games (${body.length} bytes) -> ${BUCKET}/${KEY}`);
 })().catch((e) => {
   console.error("FATAL", e);
   process.exit(1);

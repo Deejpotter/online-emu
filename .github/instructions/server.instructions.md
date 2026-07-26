@@ -47,6 +47,8 @@ window.EJS_core = "nes";
 
 ## ROM Management
 
-- Store ROMs in `public/roms/{system}/`
-- Supported systems: nes, snes, gba, gb, n64, segaMD, psx
-- Metadata in `public/roms/metadata.json`
+- ROMs live in `{GAMES_DIR}/{System}/ROMs/` for local scanning
+- Served at runtime via `/api/roms/{path}` (R2 first when configured, else local disk)
+- Supported systems: `nes`, `snes`, `gb`, `gba`, `n64`
+- Library metadata in `{DATA_DIR}/metadata.json`; seed from R2 with `LIBRARY_SOURCE=r2`
+- Upload tooling: `scripts/upload-to-r2.js`, `scripts/upload-manifest.js`
