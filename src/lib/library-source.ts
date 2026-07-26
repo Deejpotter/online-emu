@@ -22,12 +22,18 @@ const MANIFEST_KEY = "library/manifest.json";
  */
 export async function ensureLibrary(): Promise<void> {
 	await fs.mkdir(DATA_DIR, { recursive: true });
+
+	let needsSeed = false;
 	try {
-		await fs.access(METADATA_PATH);
-		return; // already present (local disk or earlier seed)
+		const raw = await fs.readFile(METADATA_PATH, "utf-8");
+		const parsed = JSON.parse(raw) as { games?: unknown[] };
+		if ((parsed.games?.length ?? 0) > 0) return;
+		needsSeed = true;
 	} catch {
-		/* fall through */
+		needsSeed = true;
 	}
+
+	if (!needsSeed) return;
 
 	if (process.env.LIBRARY_SOURCE === "r2") {
 		const client = getR2Client();

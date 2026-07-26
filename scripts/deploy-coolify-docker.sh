@@ -27,7 +27,7 @@ RUN_ARGS=(
   --network coolify
   --env-file "$ENV_FILE"
   -v "${VOLUME}:/data"
-  -v "/mnt/c/Users/Deej/Repos/online-emu/docker-entrypoint.sh:/docker-entrypoint.sh:ro"
+  --entrypoint "node"
   --label "coolify.managed=true"
   --label "coolify.type=application"
   --label "coolify.name=${CONTAINER}"
@@ -53,6 +53,6 @@ if [[ -n "$GAMES_MOUNT" && -d "$GAMES_MOUNT" ]]; then
   echo "Binding games mount: ${GAMES_MOUNT} -> /data/games"
 fi
 
-docker run "${RUN_ARGS[@]}" "$IMAGE"
+docker run "${RUN_ARGS[@]}" "$IMAGE" node_modules/.bin/tsx server.ts
 
 echo "Deployed ${CONTAINER} on network coolify -> https://roms.deejpotter.com"

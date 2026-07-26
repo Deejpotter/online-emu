@@ -48,13 +48,13 @@ async function main() {
 		await app.prepare();
 		console.log("[Server] Next.js prepared");
 
-		// Initialize ROM directory structure
-		await initializeRomDirectory();
-		console.log("[Server] ROM directory initialized");
-
-		// Seed the library (from R2 when absent locally)
+		// Seed the library from R2 before local init creates an empty manifest
 		await ensureLibrary();
 		console.log("[Server] Library ready");
+
+		// Initialize ROM directory structure (data dir; empty metadata only if still absent)
+		await initializeRomDirectory();
+		console.log("[Server] ROM directory initialized");
 
 		// Scan for new ROMs (no-op on Coolify where ROMs live in R2)
 		const { added, total } = await scanForNewRoms();
