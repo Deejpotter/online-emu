@@ -1,50 +1,21 @@
 /**
  * SRM (In-Game Saves) API Route
  *
- * Handles server-side storage for SRM files (in-game battery/memory card saves).
- * These are different from save states - they persist the game's internal save system.
- *
- * GET  /api/srm/[gameId] - Load SRM file from server
- * POST /api/srm/[gameId] - Save SRM file to server
- * DELETE /api/srm/[gameId] - Delete SRM file from server
- *
- * URL Parameters:
- *   gameId - The game name (same as EJS_gameName, URL-decoded)
- *
- * Query Parameters:
- *   system - The emulator system (e.g., 'n64', 'psx') - required for locating save dir
- *
- * Authentication:
- *   Requires 'profileId' cookie to identify the user.
- *   Returns 401 if no profile is selected.
- *
- * SRM files are stored at:
- *   {gamesDir}/{system}/saves/{profileId}/{gameId}.srm
- *
- * Migration: If no SRM exists in profile dir, checks legacy path:
- *   {gamesDir}/{system}/saves/{gameId}.srm
- *   Legacy saves are read but new saves always go to profile dir.
+ * Backend: SAVE_STORAGE=r2 (Coolify) or local filesystem (dev).
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import fs from "fs/promises";
-import path from "path";
-import { getGamesDirectory } from "@/lib/game-library";
+import {
+	getSrm,
+	putSrm,
+	deleteSrm,
+	getSaveStorageBackend,
+} from "@/lib/save-storage";
 
-/**
- * Get profile ID from request cookies.
- * Returns null if not found.
- */
 function getProfileId(request: NextRequest): string | null {
 	return request.cookies.get("profileId")?.value || null;
 }
 
-/**
- * GET /api/srm/[gameId]
- *
- * Load an SRM (in-game save) file from the server.
- * Returns the raw binary SRM data.
- */
 export async function GET(
 	request: NextRequest,
 	{ params }: { params: Promise<{ gameId: string }> }
@@ -54,7 +25,6 @@ export async function GET(
 		const searchParams = request.nextUrl.searchParams;
 		const system = searchParams.get("system");
 
-		// Get profile ID from cookie
 		const profileId = getProfileId(request);
 		if (!profileId) {
 			return NextResponse.json(
@@ -66,7 +36,6 @@ export async function GET(
 			);
 		}
 
-		// Validate required params
 		if (!system) {
 			return NextResponse.json(
 				{ success: false, error: "Missing required parameter: system" },
@@ -74,63 +43,22 @@ export async function GET(
 			);
 		}
 
-		// Decode the game ID (it may contain URL-encoded characters)
 		const decodedGameId = decodeURIComponent(gameId);
+		const result = await getSrm(profileId, system, decodedGameId);
 
-		// Build SRM file paths
-		const gamesDir = getGamesDirectory();
-		const profileSavesDir = path.join(gamesDir, system, "saves", profileId);
-		const legacySavesDir = path.join(gamesDir, system, "saves");
-		const srmFileName = `${decodedGameId}.srm`;
-		const profileSrmPath = path.join(profileSavesDir, srmFileName);
-		const legacySrmPath = path.join(legacySavesDir, srmFileName);
-
-		// Security check: ensure path stays within games directory
-		const resolvedPath = path.resolve(profileSrmPath);
-		const resolvedGamesDir = path.resolve(gamesDir);
-		if (!resolvedPath.startsWith(resolvedGamesDir)) {
+		if (!result) {
 			return NextResponse.json(
-				{ success: false, error: "Invalid path" },
-				{ status: 403 }
+				{ success: false, error: "SRM file not found" },
+				{ status: 404 }
 			);
 		}
 
-		// Check if SRM file exists in profile directory
-		let srmPath = profileSrmPath;
-		let isLegacy = false;
-		try {
-			await fs.access(profileSrmPath);
-		} catch {
-			// Try legacy path (for migration)
-			try {
-				await fs.access(legacySrmPath);
-				srmPath = legacySrmPath;
-				isLegacy = true;
-				console.log(
-					`[API] Found legacy SRM for "${decodedGameId}" - consider migrating to profile dir`
-				);
-			} catch {
-				// No SRM file exists - return 404 (this is normal for new games)
-				return NextResponse.json(
-					{
-						success: false,
-						error: "SRM file not found",
-						path: profileSrmPath.replace(gamesDir, "{gamesDir}"),
-					},
-					{ status: 404 }
-				);
-			}
-		}
-
-		// Read and return the SRM file
-		const srmData = await fs.readFile(srmPath);
+		const { data: srmData, isLegacy } = result;
 		console.log(
-			`[API] Loaded SRM for "${decodedGameId}" profile=${profileId} (${
-				srmData.length
-			} bytes)${isLegacy ? " [LEGACY]" : ""}`
+			`[API] Loaded SRM for "${decodedGameId}" profile=${profileId} (${srmData.length} bytes)${isLegacy ? " [LEGACY]" : ""}`
 		);
 
-		return new NextResponse(srmData, {
+		return new NextResponse(new Uint8Array(srmData), {
 			status: 200,
 			headers: {
 				"Content-Type": "application/octet-stream",
@@ -139,9 +67,16 @@ export async function GET(
 				"X-Save-Type": "srm",
 				"X-Profile-Id": profileId,
 				"X-Legacy-Save": isLegacy ? "true" : "false",
+				"X-Save-Source": getSaveStorageBackend(),
 			},
 		});
 	} catch (error) {
+		if (error instanceof Error && error.message === "Invalid path") {
+			return NextResponse.json(
+				{ success: false, error: "Invalid path" },
+				{ status: 403 }
+			);
+		}
 		console.error("[API] Error loading SRM:", error);
 		return NextResponse.json(
 			{
@@ -154,13 +89,6 @@ export async function GET(
 	}
 }
 
-/**
- * POST /api/srm/[gameId]
- *
- * Save an SRM (in-game save) file to the server.
- * Expects raw binary data in the request body.
- * Always saves to profile-specific directory.
- */
 export async function POST(
 	request: NextRequest,
 	{ params }: { params: Promise<{ gameId: string }> }
@@ -170,7 +98,6 @@ export async function POST(
 		const searchParams = request.nextUrl.searchParams;
 		const system = searchParams.get("system");
 
-		// Get profile ID from cookie
 		const profileId = getProfileId(request);
 		if (!profileId) {
 			return NextResponse.json(
@@ -182,7 +109,6 @@ export async function POST(
 			);
 		}
 
-		// Validate required params
 		if (!system) {
 			return NextResponse.json(
 				{ success: false, error: "Missing required parameter: system" },
@@ -190,26 +116,7 @@ export async function POST(
 			);
 		}
 
-		// Decode the game ID
 		const decodedGameId = decodeURIComponent(gameId);
-
-		// Build SRM file path (always use profile directory for new saves)
-		const gamesDir = getGamesDirectory();
-		const savesDir = path.join(gamesDir, system, "saves", profileId);
-		const srmFileName = `${decodedGameId}.srm`;
-		const srmPath = path.join(savesDir, srmFileName);
-
-		// Security check
-		const resolvedPath = path.resolve(srmPath);
-		const resolvedGamesDir = path.resolve(gamesDir);
-		if (!resolvedPath.startsWith(resolvedGamesDir)) {
-			return NextResponse.json(
-				{ success: false, error: "Invalid path" },
-				{ status: 403 }
-			);
-		}
-
-		// Get the binary data from request body
 		const arrayBuffer = await request.arrayBuffer();
 		const srmData = Buffer.from(arrayBuffer);
 
@@ -220,11 +127,7 @@ export async function POST(
 			);
 		}
 
-		// Ensure saves directory exists (includes profile subdirectory)
-		await fs.mkdir(savesDir, { recursive: true });
-
-		// Write the SRM file
-		await fs.writeFile(srmPath, srmData);
+		await putSrm(profileId, system, decodedGameId, srmData);
 		console.log(
 			`[API] Saved SRM for "${decodedGameId}" profile=${profileId} (${srmData.length} bytes)`
 		);
@@ -236,10 +139,16 @@ export async function POST(
 				profileId,
 				system,
 				size: srmData.length,
-				path: srmPath.replace(gamesDir, "{gamesDir}"),
+				source: getSaveStorageBackend(),
 			},
 		});
 	} catch (error) {
+		if (error instanceof Error && error.message === "Invalid path") {
+			return NextResponse.json(
+				{ success: false, error: "Invalid path" },
+				{ status: 403 }
+			);
+		}
 		console.error("[API] Error saving SRM:", error);
 		return NextResponse.json(
 			{
@@ -252,12 +161,6 @@ export async function POST(
 	}
 }
 
-/**
- * DELETE /api/srm/[gameId]
- *
- * Delete an SRM file from the server.
- * Only deletes from profile-specific directory (not legacy saves).
- */
 export async function DELETE(
 	request: NextRequest,
 	{ params }: { params: Promise<{ gameId: string }> }
@@ -267,7 +170,6 @@ export async function DELETE(
 		const searchParams = request.nextUrl.searchParams;
 		const system = searchParams.get("system");
 
-		// Get profile ID from cookie
 		const profileId = getProfileId(request);
 		if (!profileId) {
 			return NextResponse.json(
@@ -279,7 +181,6 @@ export async function DELETE(
 			);
 		}
 
-		// Validate required params
 		if (!system) {
 			return NextResponse.json(
 				{ success: false, error: "Missing required parameter: system" },
@@ -287,37 +188,16 @@ export async function DELETE(
 			);
 		}
 
-		// Decode the game ID
 		const decodedGameId = decodeURIComponent(gameId);
+		const deleted = await deleteSrm(profileId, system, decodedGameId);
 
-		// Build SRM file path (profile directory only)
-		const gamesDir = getGamesDirectory();
-		const savesDir = path.join(gamesDir, system, "saves", profileId);
-		const srmFileName = `${decodedGameId}.srm`;
-		const srmPath = path.join(savesDir, srmFileName);
-
-		// Security check
-		const resolvedPath = path.resolve(srmPath);
-		const resolvedGamesDir = path.resolve(gamesDir);
-		if (!resolvedPath.startsWith(resolvedGamesDir)) {
-			return NextResponse.json(
-				{ success: false, error: "Invalid path" },
-				{ status: 403 }
-			);
-		}
-
-		// Check if file exists
-		try {
-			await fs.access(srmPath);
-		} catch {
+		if (!deleted) {
 			return NextResponse.json(
 				{ success: false, error: "SRM file not found" },
 				{ status: 404 }
 			);
 		}
 
-		// Delete the file
-		await fs.unlink(srmPath);
 		console.log(
 			`[API] Deleted SRM for "${decodedGameId}" profile=${profileId}`
 		);
@@ -332,6 +212,12 @@ export async function DELETE(
 			},
 		});
 	} catch (error) {
+		if (error instanceof Error && error.message === "Invalid path") {
+			return NextResponse.json(
+				{ success: false, error: "Invalid path" },
+				{ status: 403 }
+			);
+		}
 		console.error("[API] Error deleting SRM:", error);
 		return NextResponse.json(
 			{

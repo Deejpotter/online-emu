@@ -13,6 +13,7 @@ import { createServer } from "http";
 import { parse } from "url";
 import next from "next";
 import { initializeRomDirectory, scanForNewRoms, ensureLibrary } from "./src/lib/index";
+import { runMigrations } from "./src/lib/db";
 import os from "os";
 
 // Environment configuration
@@ -48,13 +49,17 @@ async function main() {
 		await app.prepare();
 		console.log("[Server] Next.js prepared");
 
-		// Initialize ROM directory structure
-		await initializeRomDirectory();
-		console.log("[Server] ROM directory initialized");
+		// Apply Postgres schema when PROFILE_STORAGE=postgres
+		await runMigrations();
+		console.log("[Server] Database ready");
 
-		// Seed the library (from R2 when absent locally)
+		// Seed the library from R2 before local init creates an empty manifest
 		await ensureLibrary();
 		console.log("[Server] Library ready");
+
+		// Initialize ROM directory structure (data dir; empty metadata only if still absent)
+		await initializeRomDirectory();
+		console.log("[Server] ROM directory initialized");
 
 		// Scan for new ROMs (no-op on Coolify where ROMs live in R2)
 		const { added, total } = await scanForNewRoms();

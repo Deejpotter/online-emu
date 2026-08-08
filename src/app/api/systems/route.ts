@@ -17,7 +17,7 @@ interface SystemInfo {
 /**
  * Map of system IDs to EmulatorJS core names.
  * These correspond to the cores available in EmulatorJS.
- * Note: External systems (ps2, gamecube) don't have EmulatorJS cores.
+ * Returns all supported EmulatorJS systems and their core mappings.
  */
 const SYSTEM_CORES: Partial<Record<EmulatorSystem, string>> = {
   nes: 'nes',

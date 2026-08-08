@@ -2,7 +2,7 @@
 
 Self-hosted retro game emulator powered by EmulatorJS. Play classic console games in your browser with support for save states, profiles, and PWA installation.
 
-**Live at:** https://roms.deejpotter.com (via Cloudflare Tunnel, runs on DESKTOP-UBV27I5)
+**Live at:** https://roms.deejpotter.com (Coolify container on DESKTOP-UBV27I5, Cloudflare coolify tunnel, R2-backed library)
 
 ## Features
 
@@ -13,6 +13,63 @@ Self-hosted retro game emulator powered by EmulatorJS. Play classic console game
 - **Gamepad Support** - Automatic detection of USB/Bluetooth controllers via Browser Gamepad API
 - **Offline-Ready** - Service worker caches games and assets for offline play
 - **Self-Hosted** - Complete control over your data, no external dependencies
+
+## Deployment Options
+
+### Option A: Coolify + Cloudflare R2 (current production)
+
+Production runs at `roms.deejpotter.com` as a **Docker Compose stack** (app + Postgres) on the Coolify network. ROMs, library, and saves are in Cloudflare R2; profiles are in Postgres.
+
+```bash
+# One-time: upload ROMs and manifest to R2
+yarn scan:library
+yarn upload:roms
+yarn upload:manifest
+yarn verify:r2
+```
+
+Deploy via Coolify UI (Docker Compose build pack) or:
+
+```bash
+bash scripts/deploy-coolify-docker.sh
+```
+
+Full guide: [docs/COOLIFY.md](docs/COOLIFY.md)
+
+Key env vars (`.env.coolify`):
+
+```
+LIBRARY_SOURCE=r2
+SAVE_STORAGE=r2
+PROFILE_STORAGE=postgres
+POSTGRES_PASSWORD=...
+R2_ACCOUNT_ID=...
+R2_ACCESS_KEY_ID=...
+R2_SECRET_ACCESS_KEY=...
+R2_BUCKET_NAME=deejpotter
+PORT=80
+```
+
+### Option B: Local PC + PM2 (legacy / dev)
+
+For local-only development with disk-scanned ROMs:
+
+```bash
+yarn install
+yarn build
+pm2 start ecosystem.config.js   # Port 3100
+```
+
+Set in `.env`:
+
+```
+GAMES_DIR=H:\Games
+LIBRARY_SOURCE=local
+DATA_DIR=./data
+PORT=3100
+```
+
+ROMs are scanned from `GAMES_DIR` on startup. PM2 is no longer the primary production host — stop `onlineemu` if it conflicts with the Coolify route.
 
 ## Quick Start
 
@@ -30,61 +87,37 @@ Notes:
 - `yarn dev:next` is the recommended, fast dev workflow. It starts the Next.js app directly.
 - For production-like behaviour (server initialization, ROM scan), run `yarn build && yarn start`.
 
-### Production Deployment (Local PC via Cloudflare Tunnel)
+### Production Deployment (Coolify)
 
-This project runs on **DESKTOP-UBV27I5** (Windows) and is exposed publicly via Cloudflare Tunnel at `roms.deejpotter.com`.
+Production on **DESKTOP-UBV27I5** is served by a Coolify-managed Docker container at `roms.deejpotter.com` via the **coolify** Cloudflare tunnel (not the legacy krasus → PM2 route).
 
-#### 1. Build and start with PM2
+#### 1. Deploy
+
+Preferred: create/update the app in Coolify UI at `https://coolify.deejpotter.com` (Dockerfile build, `/data` volume, env vars above).
+
+Fallback when the Coolify API token is stale:
 
 ```bash
-yarn install
-yarn build
-pm2 start ecosystem.config.js   # Starts on port 3000
-pm2 save                         # Persist across reboots
-pm2 startup                      # Enable autostart
+bash scripts/deploy-coolify-docker.sh
 ```
 
 #### 2. Cloudflare Tunnel
 
-The tunnel is already configured. The relevant ingress rule in `~/.cloudflared/krasus-config.yml`:
+`roms.deejpotter.com` routes through the **coolify** tunnel to Traefik → container port 80. Remove any duplicate ingress for this hostname from the legacy `krasus` tunnel config.
 
-```yaml
-- hostname: roms.deejpotter.com
-  service: http://localhost:3100
-```
-
-Tunnel name: `krasus` (shared with other services). Restart the tunnel service after config changes:
+#### 3. Post-deploy verification
 
 ```bash
-# Check tunnel status
-cloudflared tunnel list
-
-# Restart tunnel service (Windows)
-Restart-Service cloudflared
+curl -s https://roms.deejpotter.com/api/status
+curl -s https://roms.deejpotter.com/api/systems   # expect 5 systems
+curl -I "https://roms.deejpotter.com/api/roms/GB/ROMs/4-in-1%20Fun%20Pak.zip"   # X-ROM-Source: r2
 ```
 
-#### 3. Cloudflare DNS
-
-Add a CNAME record in Cloudflare DNS:
-- **Name:** `roms`
-- **Target:** `<tunnel-id>.cfargotunnel.com`
-- **Proxy:** Enabled (orange cloud)
+See [.github/MANUAL-QA.md](.github/MANUAL-QA.md) for browser checks.
 
 #### 4. ROMs
 
-Place ROM files in `public/roms/{system}/` — e.g. `public/roms/nes/`, `public/roms/snes/`, etc.
-
-The app scans this directory automatically on startup.
-
-```bash
-# ROM directory structure
-public/roms/
-  nes/
-  snes/
-  gb/
-  gba/
-  n64/
-```
+ROMs and the library manifest live in Cloudflare R2 (3,744 games across 5 systems). Optional local fallback: bind-mount `H:\Games` (WSL: `/mnt/h/Games`) to `/data/games` when the external drive is connected.
 
 ## Project Structure
 
@@ -96,12 +129,15 @@ online-emu/
 │   │   │   ├── profiles/      # Profile CRUD
 │   │   │   ├── saves/         # Save state storage
 │   │   │   ├── srm/           # In-game saves
+│   │   │   ├── roms/          # ROM streaming (R2 + local fallback)
 │   │   │   └── games/         # ROM library
 │   │   ├── play/      # Emulator page (iframe wrapper)
 │   │   └── profiles/  # Profile selection UI
 │   ├── lib/           # Utilities
 │   │   ├── profiles.ts        # Profile management
-│   │   └── game-library.ts    # ROM scanning
+│   │   ├── game-library.ts    # ROM scanning
+│   │   ├── library-source.ts  # R2 library seeding
+│   │   └── r2-client.ts       # Shared R2 helpers
 │   ├── middleware.ts          # Profile auth check
 │   └── types/         # TypeScript definitions
 ├── public/
@@ -112,7 +148,16 @@ online-emu/
 ├── data/              # App data (auto-created)
 │   ├── profiles.json       # User profiles
 │   └── metadata.json       # Game metadata cache
-├── scripts/           # Setup scripts
+├── scripts/           # Setup + R2 upload scripts
+│   ├── setup-emulatorjs.js
+│   ├── scan-library.js
+│   ├── seed-library-from-r2.js
+│   ├── upload-to-r2.js
+│   ├── upload-manifest.js
+│   └── verify-r2-flow.js
+├── docs/
+│   ├── COOLIFY.md          # Coolify deployment guide
+│   └── DOCKERFILE.md       # Docker build notes
 ├── ecosystem.config.js     # PM2 configuration
 ├── server.ts          # Custom Next.js server
 └── .github/
@@ -161,7 +206,7 @@ Communication between React and EmulatorJS uses `postMessage`.
 
 ## Development
 
-See [.github/todos.md](.github/todos.md) for current development status and roadmap.
+See [.github/todos.md](.github/todos.md) for progress and [.github/MANUAL-QA.md](.github/MANUAL-QA.md) for browser verification steps.
 
 ## Legal Notice
 

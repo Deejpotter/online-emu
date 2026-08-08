@@ -1,3 +1,23 @@
+// Provide stable test paths before modules load (game-library reads GAMES_DIR at import).
+const os = require("os");
+const path = require("path");
+const fs = require("fs");
+
+if (!process.env.GAMES_DIR) {
+	const testRoot = fs.mkdtempSync(path.join(os.tmpdir(), "online-emu-jest-"));
+	process.env.GAMES_DIR = testRoot;
+	process.env.DATA_DIR = path.join(testRoot, "data");
+	fs.mkdirSync(process.env.DATA_DIR, { recursive: true });
+}
+
+if (!process.env.SAVE_STORAGE) {
+	process.env.SAVE_STORAGE = "local";
+}
+
+if (!process.env.PROFILE_STORAGE) {
+	process.env.PROFILE_STORAGE = "file";
+}
+
 // Minimal polyfills for Web Fetch API classes used by `next/server` during tests.
 // These are intentionally small — tests only need basic shape (Request/Response/Headers).
 

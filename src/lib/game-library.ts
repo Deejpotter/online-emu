@@ -9,7 +9,7 @@
  *
  * IMPORTANT: Only browser-compatible systems are supported.
  * EmulatorJS uses WebAssembly cores that run in the browser, which limits
- * us to older consoles (NES through PSX/N64). More demanding systems like
+ * us to older consoles (NES through N64). More demanding systems like
  * PS2 and GameCube cannot run in-browser and are not supported.
  */
 

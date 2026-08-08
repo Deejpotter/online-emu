@@ -1,0 +1,10 @@
+# Local dev override — expose port 8080 on host (no Traefik required).
+# Copy to docker-compose.override.yml for local compose testing.
+services:
+  app:
+    ports:
+      - "8080:80"
+    environment:
+      PROFILE_STORAGE: file
+      SAVE_STORAGE: local
+      LIBRARY_SOURCE: local

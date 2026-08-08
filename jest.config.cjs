@@ -5,7 +5,7 @@ module.exports = {
   transform: {
     '^.+\\.(ts|tsx|js|jsx)$': 'ts-jest',
   },
-  transformIgnorePatterns: ['/node_modules/(?!(uuid)/)'],
+  transformIgnorePatterns: ['/node_modules/(?!(uuid|@aws-sdk)/)'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1'
   },

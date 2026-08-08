@@ -1,17 +1,10 @@
 # Online Emulator - Development TODOs
 
-## Current Phase: Local PC + Cloudflare Tunnel Deployment
+## Current Phase: Coolify Compose + R2 + Postgres
 
-**Goal**: Run online-emu on DESKTOP-UBV27I5 (Windows, local PC) and expose it publicly at `roms.deejpotter.com` via the existing Cloudflare Tunnel (`krasus`).
+**Goal**: Production at `roms.deejpotter.com` runs as Docker Compose (app + Postgres) on Coolify. R2 for ROMs/library/saves; Postgres for profiles.
 
-**Why**:
-
-- Local PC has plenty of storage for ROMs — no VPS cost
-- Cloudflare Tunnel already set up and working for other services (krasus, tasks)
-- Same pattern as other self-hosted apps (consistent, easy to manage)
-- PM2 handles autostart on Windows boot
-
-**Note**: Vultr VPS deployment plan archived — no longer needed. Docker/Coolify work archived in branch `archive/coolify-docker-attempt`.
+**Legacy:** PM2 + krasus tunnel — local dev only.
 
 ---
 
@@ -24,7 +17,7 @@
 
 ---
 
-## 📋 Local PC + Cloudflare Tunnel Deployment
+## 📋 Local PC + Cloudflare Tunnel Deployment (Legacy)
 
 ### ✅ Step 1: Build
 - ✅ 1.1: `yarn install` — dependencies installed
@@ -51,10 +44,26 @@
 ### ✅ Step 5: Testing & Verification
 - ✅ 5.1: Profile creation works
 - ✅ 5.2: Games load and run (GBA confirmed, Fire Red and Leaf Green)
-- ⬜ 5.3: Auto-save state (every 60s) — verify in PM2 logs
-- ⬜ 5.4: Auto-load save state on game start — verify position is restored
+- ⬜ 5.3: Auto-save state (every 60s) — verify per [.github/MANUAL-QA.md](MANUAL-QA.md)
+- ⬜ 5.4: Auto-load save state on game start — verify per MANUAL-QA
 - ✅ 5.4b: SRM (in-game saves) save and load — confirmed working in PM2 logs
-- ⬜ 5.5: Verify PWA installable on mobile
+- ⬜ 5.5: Verify PWA installable on mobile — per MANUAL-QA
+
+---
+
+## ✅ Coolify Compose Production (2026-07-26)
+
+- ✅ `docker-compose.yml` — app + Postgres
+- ✅ `docker-compose.coolify.yml` — Traefik labels + coolify network
+- ✅ Dockerfile uses build context (no git clone)
+- ✅ Profiles in Postgres (`PROFILE_STORAGE=postgres`)
+- ✅ Saves/SRM in R2 (`SAVE_STORAGE=r2`, `X-Save-Source: r2`)
+- ✅ Migration scripts: `migrate-profiles-to-postgres.js`, `migrate-saves-to-r2.js`
+- ✅ Deployed via `scripts/deploy-coolify-docker.sh`
+- ✅ API smoke: status, 5 systems, `X-ROM-Source: r2`, profile create, save to R2
+- ✅ 66 unit tests passing (including `save-storage.test.ts`)
+- ⬜ Coolify UI Docker Compose app (manual — using WSL deploy script)
+- ⬜ Browser QA iframe items — per MANUAL-QA
 
 ---
 
@@ -131,11 +140,7 @@ Three bugs reported when attempting to play a GBA game (Pokémon Leaf Green):
 **Logic**: Confirm all three reported bugs are resolved.
 
 **Sub-steps**:
-- ⬜ 5.1: Open DevTools console on a game page — confirm no "Translation not found" warnings
-- ⬜ 5.2: Open a GBA game — confirm no "Error downloading game state" banner
-- ⬜ 5.3: Confirm emulator loads and game starts (no black screen, no 30s timeout)
-- ⬜ 5.4: Confirm save/load still works (manual save state, in-game SRM)
-- ⬜ 5.5: Test with a fresh profile (no prior saves) to confirm new-game path is clean
+- ⬜ 5.1–5.5: Browser verification — see [.github/MANUAL-QA.md](MANUAL-QA.md)
 
 ---
 
@@ -212,16 +217,16 @@ Researched Play!, Sunshine/Moonlight, RetroArch web player. Decision: browser-on
 
 ---
 
-## ⬜ Testing: Expand automated test coverage
+## ✅ Testing: Automated test coverage
 
-Goal: Increase unit and integration coverage for critical flows (SRM, save-states, emulator iframe behavior, and game-library helpers).
+- ✅ SRM API edge tests (`src/app/api/srm/__tests__/srm-api.additional.test.ts`)
+- ✅ Save-state API edge tests (`src/app/api/saves/__tests__/saves-api.additional.test.ts`)
+- ✅ `EmulatorContent` component tests
+- ✅ `game-library` helper + scan tests
+- ✅ ROMs API tests (`src/app/api/roms/__tests__/roms-api.test.ts`)
+- ✅ CI workflow runs `yarn test` on PRs (`.github/workflows/ci.yml`)
 
-- ⬜ Add SRM API edge tests (missing params, empty body, path traversal, legacy save header)
-- ⬜ Add save-state API edge tests
-- ⬜ Add `EmulatorContent` component tests
-- ⬜ Add `game-library` helper tests
-- ⬜ Add CI workflow to run `yarn test` on PRs
-- ⬜ Run tests locally and fix failures until green
+Run locally: `yarn test && yarn lint && yarn build`
 
 ---
 

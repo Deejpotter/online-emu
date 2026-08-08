@@ -8,3 +8,6 @@
 export * from "./game-library";
 export * from "./profiles";
 export * from "./library-source";
+export * from "./r2-client";
+export * from "./save-storage";
+export * from "./db";
