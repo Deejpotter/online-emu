@@ -133,8 +133,7 @@ yarn build            # Next.js production build
 # See AGENTS.md for the current app and domain.
 ```
 
-Deployment is to **Coolify on the NUC** (Docker). Do not add a VPS/PM2/Nginx
-deployment path.
+Deployment is to **Coolify on the NUC** (Docker).
 
 ## Resources
 
@@ -506,7 +505,7 @@ yarn build
 
 - App: Coolify on the NUC, built from the repo `Dockerfile`.
 - Deploy by pushing to `main`; Coolify auto-deploys.
-- Do not add VPS, PM2, Nginx or Let's Encrypt steps. The platform handles TLS.
+- The platform handles TLS and process management.
 - ROMs and saves: see `AGENTS.md` and the R2 configuration.
 
 ## Resources
