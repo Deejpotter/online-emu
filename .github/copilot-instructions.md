@@ -15,7 +15,7 @@ Key characteristics:
   in `data/profiles.json`
 - **Profiles**: Local JSON storage; no auth required
 - **PWA**: Service worker enables offline play and home‑screen install
-- **Deployment target**: Vultr VPS (80 GB SSD, 4 GB RAM) with Node.js + PM2
+- **Deployment target**: Coolify on the NUC (Docker), see `AGENTS.md`
 
 ## Big‑Picture Architecture
 
@@ -48,7 +48,7 @@ Key characteristics:
 - **Languages**: TypeScript, JavaScript, CSS
 - **Frameworks/Libraries**: Next.js 16, React 18, Jest, React Testing Library
 - **Build tools**: Yarn (preferred) or npm; Turbopack used internally by dev
-- **Server**: Node.js 20+, PM2 for production process management
+- **Server**: Node.js 20+, Docker on Coolify
 - **Emulator assets**: checked into `public/emulatorjs` by `scripts/setup-emulatorjs.js`
 - **Scripts**: `yarn dev:next`, `yarn build`, `yarn install`
 
@@ -96,7 +96,6 @@ online-emu/
 ├── public/            # Static assets: emulator.html, emulatorjs, roms, sw.js
 ├── scripts/           # Setup scripts (icon generator, downloading assets)
 ├── server.ts          # Custom Next.js server with WebSocket signaling
-├── ecosystem.config.js# PM2 configuration
 └── .github/           # AI instructions, todos, CI configs
 ```
 
@@ -130,20 +129,18 @@ examples in `.github/instructions/testing.instructions.md`).
 
 ```bash
 yarn build            # Next.js production build
-pm install -g pm2
-pm2 start ecosystem.config.js
-pm2 save
-pm2 startup
+# Deploy by pushing to main; Coolify builds the Dockerfile and deploys.
+# See AGENTS.md for the current app and domain.
 ```
 
-Deployment is typically to a Vultr VPS with Nginx reverse proxy and Let's
-Encrypt SSL; see `.github/todos.md` for the current deployment plan.
+Deployment is to **Coolify on the NUC** (Docker). Do not add a VPS/PM2/Nginx
+deployment path.
 
 ## Resources
 
 - [EmulatorJS Docs](https://emulatorjs.org/docs)
 - [Next.js 16 App Router](https://nextjs.org/docs)
-- [PM2 Quick Start](https://pm2.keymetrics.io/docs/usage/quick-start/)
+- [Coolify Docs](https://coolify.io/docs)
 - `context7` MCP for library documentation (use `mcp_my-mcp-server_get_documentation` tool)
 
 ## AI Agent Workflow
@@ -319,7 +316,7 @@ window.parent.postMessage({ type: "ready", canvas: canvasElement }, "*");
 - **User Profiles**: Simple local profiles (no authentication required)
 - **Emulation**: EmulatorJS (self-hosted, runs in iframe, WebAssembly cores)
 - **PWA**: Service worker for offline support, installable on all devices
-- **Deployment**: Local PC + PM2 + Cloudflare Tunnel, or Coolify + R2 (see [docs/COOLIFY.md](../docs/COOLIFY.md))
+- **Deployment**: Coolify + R2 (see [docs/COOLIFY.md](../docs/COOLIFY.md))
 
 ## Supported Systems
 
@@ -471,7 +468,6 @@ online-emu/
 │   ├── sw.js          # Service worker for PWA offline support
 │   └── roms/          # ROM files by system
 ├── scripts/           # Setup scripts (including icon generation)
-├── ecosystem.config.js # PM2 production configuration
 ├── .env.example       # Environment variables template
 ├── server.ts          # Custom Next.js server
 │
@@ -495,14 +491,10 @@ npm install
 npm run dev
 npm run build
 
-# Production (Vultr VPS)
+# Production (Coolify on the NUC)
 yarn install
 yarn build
-# Start with PM2 (system-wide)
-npm install -g pm2
-pm2 start ecosystem.config.js
-pm2 save
-pm2 startup
+# Push to main; Coolify builds the Dockerfile and deploys.
 
 # PWA Installation
 # 1. Open the site on localhost (dev) or your server (HTTPS recommended)
@@ -510,30 +502,18 @@ pm2 startup
 # 3. App installs with offline support
 ```
 
-## Deployment Strategy (Vultr VPS)
+## Deployment (Coolify)
 
-**Recommended Plan**: Standard ($12/mo)
-
-- 80GB SSD Storage
-- 4GB RAM
-- 3TB Monthly Bandwidth
-- Sufficient for 200+ retro games or 50+ PSX/PSP titles
-
-**Setup Overview**:
-
-1. Clone repo and install dependencies
-2. Upload ROMs to `public/roms/{system}/`
-3. Build production bundle (`yarn build`)
-4. Start with PM2 for process management
-5. Configure Nginx reverse proxy (optional, for SSL/domain)
-6. Set up SSL with Let's Encrypt (recommended for HTTPS)
+- App: Coolify on the NUC, built from the repo `Dockerfile`.
+- Deploy by pushing to `main`; Coolify auto-deploys.
+- Do not add VPS, PM2, Nginx or Let's Encrypt steps. The platform handles TLS.
+- ROMs and saves: see `AGENTS.md` and the R2 configuration.
 
 ## Resources
 
 - [EmulatorJS Docs](https://emulatorjs.org/docs)
 - [Next.js 16 Docs](https://nextjs.org/docs)
-- [Vultr Docs](https://www.vultr.com/docs/)
-- [PM2 Guide](https://pm2.keymetrics.io/docs/usage/quick-start/)
+- [Coolify Docs](https://coolify.io/docs)
 
 ## AI Agent Workflow
 
