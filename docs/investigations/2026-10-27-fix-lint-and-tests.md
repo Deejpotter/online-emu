@@ -2,7 +2,7 @@
 
 - Date: 2026-10-27
 - Investigator: Claude Code (Opus 5.5)
-- Status: code fixed; live site down, not resolved (see open items)
+- Status: code fixed; live site restored 2026-10-27 (see section 9)
 
 ## 1. What was asked
 "Fix the app." No specific symptom given, so the manual gate (lint, test, build) and the live site were checked.
@@ -43,3 +43,19 @@ npx jest
 npm run build
 curl -s -o /dev/null -w "%{http_code}" https://roms.deejpotter.com/api/status
 ```
+
+## 9. Live site follow-up (same day)
+- Hypothesis "Coolify token expired": **wrong**. `COOLIFY_API_TOKEN` in `krasus/.env` works; only the Coolify MCP server rejected it (stale copy).
+- Cause of the 503: online-emu was not a Coolify resource. It had been run by hand with `scripts/deploy-coolify-docker.sh`, and the NUC had no containers or volumes for it.
+- Fix: created Coolify app `tgxuc2kku2kjdlm8um5xd9kb` (GitHub App, dockercompose, `main`), set R2 and Postgres env from `.env.coolify`, added domains roms./emu., deployed.
+- First deploy failed: `yarn install` got ESOCKETTIMEDOUT from the registry while the NUC was at load ~25. The retry succeeded (yarn 704 s, next build 346 s).
+- Container was healthy but still 503: it was not on the `coolify` network. Joined it with `docker network connect` and set `connect_to_docker_network: true` so later deploys keep it.
+- Verified: `/api/status` 200 on both hosts, `/api/systems` 200, a GB ROM returns 200 with `X-ROM-Source: r2`.
+
+## 10. Faster deploys
+- Dockerfile: BuildKit cache mounts for the yarn cache and `.next/cache`, `--prefer-offline --network-timeout 600000`, no `apk add wget` (BusyBox has it). `.dockerignore` drops tests, docs, scripts and compose files.
+- **Not measured.** Two timed test builds on the NUC ran alongside other apps' Coolify builds and hit the 25 min limit, so they say nothing about the cache. The test build was cancelled and its image removed.
+- Not changed: env vars are flagged build-time in Coolify. Constant ARG values do not break the layer cache, so this is not the slowdown; turning off build-time for the secrets is still worth doing for hygiene.
+
+## 11. Found in passing (not changed)
+- Day Planner (tasks.deejpotter.com) returns 503. Its container is "unhealthy" because its health check calls `curl`, which is not in its image. The NUC also shows ~560 zombie processes. Separate repo, not touched.

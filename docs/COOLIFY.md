@@ -2,7 +2,9 @@
 
 Deploy online-emu as a Docker Compose stack on Coolify: stateless app container, Postgres for profiles, Cloudflare R2 for ROMs/library/saves.
 
-**Production:** https://roms.deejpotter.com and https://emu.deejpotter.com (same Compose stack, deployed 2026-07-26)
+**Production:** https://roms.deejpotter.com and https://emu.deejpotter.com. Coolify app `online-emu` (uuid `tgxuc2kku2kjdlm8um5xd9kb`, project `online-emu`), Docker Compose build pack from `main`, created 2026-10-27. The old hand-run compose stack is gone; do not use `scripts/deploy-coolify-docker.sh` for production.
+
+**Required app setting:** *Connect To Predefined Network* (`connect_to_docker_network: true`). Without it the app sits only on its own network, Traefik cannot reach it and both hostnames return 503 "Site not found".
 
 ## Architecture
 
@@ -132,5 +134,6 @@ Browser checklist: [.github/MANUAL-QA.md](../.github/MANUAL-QA.md)
 | Profiles lost | Check Postgres volume `online-emu_postgres_data`; verify `DATABASE_URL` |
 | Saves lost | Confirm `SAVE_STORAGE=r2`; check R2 `online-emu/saves/` prefix |
 | Port 80 bind error | Use compose without host port bind; Traefik routes via coolify network |
-| Coolify API Unauthenticated | Use `scripts/deploy-coolify-docker.sh` or rotate token in Coolify UI |
+| Coolify API Unauthenticated | The MCP server may hold a stale token; call the API with `COOLIFY_API_TOKEN` from `krasus/.env` |
+| 503 "Site not found" with a healthy container | Enable *Connect To Predefined Network* and redeploy |
 | krasus + coolify tunnel conflict | Stop PM2 `onlineemu`; remove roms ingress from krasus config |
