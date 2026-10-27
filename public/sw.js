@@ -9,14 +9,16 @@
  * Strategy:
  * - Cache-first for static assets (EmulatorJS, icons)
  * - Network-first for API calls (games list, saves)
- * - Stale-while-revalidate for pages
+ * - Network-first for pages (never serve a cached redirect for a navigation)
  */
 
-const CACHE_NAME = "online-emu-v1";
+// Bump to drop caches from older workers (v1 held a redirected "/" that broke page loads).
+const CACHE_NAME = "online-emu-v2";
 
 // Assets to cache on install
+// "/" is not precached: it redirects to /profiles, and a redirected response
+// served for a navigation fails with ERR_FAILED.
 const PRECACHE_ASSETS = [
-  "/",
   "/emulatorjs/data/loader.js",
   "/emulatorjs/data/emulator.min.js",
   "/emulatorjs/data/emulator.min.css",
@@ -122,22 +124,25 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Pages - stale while revalidate
+  // Pages - network first; fall back to cache only when offline.
+  // Redirected responses are never cached or served from cache.
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      const fetchPromise = fetch(event.request).then((response) => {
-        if (response.ok) {
+    fetch(event.request)
+      .then((response) => {
+        if (response.ok && !response.redirected) {
           const clone = response.clone();
           caches.open(CACHE_NAME).then((cache) => {
             cache.put(event.request, clone);
           });
         }
         return response;
-      });
-
-      // Return cached version immediately, update in background
-      return cached || fetchPromise;
-    })
+      })
+      .catch(() =>
+        caches.match(event.request).then((cached) => {
+          if (cached && !cached.redirected) return cached;
+          return Response.error();
+        })
+      )
   );
 });
 
