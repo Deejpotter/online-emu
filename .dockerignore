@@ -10,3 +10,8 @@ data
 .hermes
 coverage
 .cursor
+**/__tests__
+docs
+scripts
+*.log
+docker-compose*.y*ml
