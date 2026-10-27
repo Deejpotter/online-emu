@@ -59,3 +59,10 @@ curl -s -o /dev/null -w "%{http_code}" https://roms.deejpotter.com/api/status
 
 ## 11. Found in passing (not changed)
 - Day Planner (tasks.deejpotter.com) returns 503. Its container is "unhealthy" because its health check calls `curl`, which is not in its image. The NUC also shows ~560 zombie processes. Separate repo, not touched.
+
+## 12. Follow-up 2026-10-28: ERR_FAILED in the browser, then 503
+- Server checks were 200, but Chrome showed ERR_FAILED. Cause: `public/sw.js` precached `/`, which redirects to `/profiles`. Chrome rejects a redirected response served for a navigation. curl has no service worker, so it never saw this. Fix (PR #1): pages are network-first, redirects are never cached, cache name bumped to `online-emu-v2` so old caches are deleted.
+- The deploy of PR #1 then returned 503: the app was "unhealthy". My Dockerfile change removed `apk add wget`, and BusyBox wget resolves `localhost` to `::1` without falling back to IPv4. Fix (PR #2): health check uses `127.0.0.1`.
+- Deploy times: before 704 s yarn + 346 s build (~25 min total); PR #1 deploy 140 s yarn + 260 s build (~17 min, including a 395 s image export); PR #2 deploy 95 s total.
+- Verified in a browser with the v2 worker active: `/` redirects to the profile picker, cache `online-emu-v2` only.
+- Note: the profile list is empty. The new Postgres volume started blank because the old stack's data volume no longer exists on the NUC. Saves live in R2 by profile ID, so recreating a profile does not bring old saves back unless the ID matches.
