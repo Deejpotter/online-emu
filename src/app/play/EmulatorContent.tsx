@@ -207,7 +207,7 @@ export function EmulatorContent() {
 
 				case "srmSaveComplete":
 					console.log("[Emulator] SRM save complete", data);
-					if ((data as any)?.success) {
+					if ((data as { success?: boolean } | undefined)?.success) {
 						showToast("In-game save uploaded to server", "success");
 					} else {
 						showToast("Failed to upload in-game save", "error");
@@ -365,6 +365,8 @@ export function EmulatorContent() {
 					<div className="text-6xl mb-4">âŒ</div>
 					<h1 className="text-xl font-bold mb-2">Failed to load game</h1>
 					<p className="text-zinc-400 mb-6">{error || "Unknown error"}</p>
+					{/* Full page load on purpose: tears down EmulatorJS globals and audio. */}
+					{/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
 					<a
 						href="/"
 						className="inline-block px-6 py-3 bg-blue-600 hover:bg-blue-500 rounded-lg font-medium transition-colors"
@@ -389,6 +391,8 @@ export function EmulatorContent() {
 				<div className="container mx-auto flex items-center justify-between gap-2">
 					{/* Left side - Back + Title */}
 					<div className="flex items-center gap-2 md:gap-4 min-w-0">
+						{/* Full page load on purpose: tears down EmulatorJS globals and audio. */}
+						{/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
 						<a
 							href="/"
 							className="text-zinc-400 hover:text-white transition-colors shrink-0 text-sm md:text-base"

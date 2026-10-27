@@ -1,3 +1,4 @@
+/** @jest-environment node */
 import { GET, POST, DELETE } from "../[gameId]/route";
 import fs from "fs/promises";
 import path from "path";

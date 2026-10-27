@@ -1,3 +1,4 @@
+/** @jest-environment node */
 import { GET, POST, DELETE } from "../[gameId]/route";
 
 const makeReq = (profileId?: string, system?: string, body?: ArrayBuffer) => {
@@ -18,7 +19,7 @@ test("POST/GET/DELETE save-state lifecycle (profile required)", async () => {
 	const system = "gba";
 
 	// POST with profile
-	let res: any = await POST(
+	const res: any = await POST(
 		makeReq(profile, system, new TextEncoder().encode("state")),
 		{ params: Promise.resolve({ gameId: "test-game" }) }
 	);
