@@ -1,3 +1,4 @@
+/** @jest-environment node */
 import { GET, POST, DELETE } from "../[gameId]/route";
 
 const makeReq = (profileId?: string, system?: string, body?: Buffer) => {
