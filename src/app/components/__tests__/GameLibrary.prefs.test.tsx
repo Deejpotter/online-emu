@@ -49,7 +49,10 @@ describe("GameLibrary preferences and scan feedback", () => {
 });
 
 describe("GameLibrary system filter persistence", () => {
-	beforeEach(() => localStorage.clear());
+	beforeEach(() => {
+		localStorage.clear();
+		window.history.replaceState(null, "", "/");
+	});
 
 	test("restores a saved system and drops unknown ones", async () => {
 		localStorage.setItem(PREFS_KEY, JSON.stringify({ system: "snes" }));
@@ -59,6 +62,7 @@ describe("GameLibrary system filter persistence", () => {
 			expect(JSON.parse(localStorage.getItem(PREFS_KEY) || "{}").system).toBe("snes")
 		);
 		unmount();
+		window.history.replaceState(null, "", "/");
 
 		localStorage.setItem(PREFS_KEY, JSON.stringify({ system: "dreamcast" }));
 		render(<GameLibrary onSelectGame={() => {}} />);
