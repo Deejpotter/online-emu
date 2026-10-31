@@ -157,8 +157,8 @@ export function EmulatorContent() {
 	 */
 	const handleEmulatorMessage = useCallback(
 		(event: MessageEvent<EmulatorIncomingMessage>) => {
-			// Basic origin check (in production, be more specific)
-			if (!event.origin.includes(window.location.host)) {
+			// Only trust our own emulator iframe (same origin)
+			if (event.origin !== window.location.origin) {
 				return;
 			}
 

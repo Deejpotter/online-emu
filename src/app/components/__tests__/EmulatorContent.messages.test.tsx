@@ -30,7 +30,7 @@ describe("EmulatorContent - messages, keyboard & UI interactions", () => {
 			window.dispatchEvent(
 				new MessageEvent("message", {
 					data: { type: "stateSaved" },
-					origin: window.location.host,
+					origin: window.location.origin,
 				})
 			);
 		});
@@ -41,7 +41,7 @@ describe("EmulatorContent - messages, keyboard & UI interactions", () => {
 			window.dispatchEvent(
 				new MessageEvent("message", {
 					data: { type: "stateLoaded" },
-					origin: window.location.host,
+					origin: window.location.origin,
 				})
 			);
 		});
@@ -55,7 +55,7 @@ describe("EmulatorContent - messages, keyboard & UI interactions", () => {
 			window.dispatchEvent(
 				new MessageEvent("message", {
 					data: { type: "srmSaveStarted" },
-					origin: window.location.host,
+					origin: window.location.origin,
 				})
 			);
 		});
@@ -68,7 +68,7 @@ describe("EmulatorContent - messages, keyboard & UI interactions", () => {
 			window.dispatchEvent(
 				new MessageEvent("message", {
 					data: { type: "srmSaveComplete", success: true },
-					origin: window.location.host,
+					origin: window.location.origin,
 				})
 			);
 		});
@@ -81,7 +81,7 @@ describe("EmulatorContent - messages, keyboard & UI interactions", () => {
 			window.dispatchEvent(
 				new MessageEvent("message", {
 					data: { type: "srmSaveComplete", success: false },
-					origin: window.location.host,
+					origin: window.location.origin,
 				})
 			);
 		});
@@ -158,7 +158,7 @@ describe("EmulatorContent - messages, keyboard & UI interactions", () => {
 			window.dispatchEvent(
 				new MessageEvent("message", {
 					data: { type: "ready", width: 320, height: 240 },
-					origin: window.location.host,
+					origin: window.location.origin,
 				})
 			);
 		});
@@ -193,7 +193,7 @@ describe("EmulatorContent - messages, keyboard & UI interactions", () => {
 			window.dispatchEvent(
 				new MessageEvent("message", {
 					data: { type: "error", message: "boom" },
-					origin: window.location.host,
+					origin: window.location.origin,
 				})
 			);
 		});
@@ -271,7 +271,7 @@ describe("EmulatorContent - messages, keyboard & UI interactions", () => {
 			window.dispatchEvent(
 				new MessageEvent("message", {
 					data: { type: "stateChanged", state: "ready" },
-					origin: window.location.host,
+					origin: window.location.origin,
 				})
 			);
 		});
@@ -282,7 +282,7 @@ describe("EmulatorContent - messages, keyboard & UI interactions", () => {
 			window.dispatchEvent(
 				new MessageEvent("message", {
 					data: { type: "stateChanged", state: "paused" },
-					origin: window.location.host,
+					origin: window.location.origin,
 				})
 			);
 		});
@@ -300,6 +300,19 @@ describe("EmulatorContent - messages, keyboard & UI interactions", () => {
 			);
 		});
 		// nothing should throw and no toast shown
+		expect(mockShowToast).not.toHaveBeenCalled();
+	});
+
+	test("ignores look-alike origins that merely contain our host", async () => {
+		render(<EmulatorContent />);
+		act(() => {
+			window.dispatchEvent(
+				new MessageEvent("message", {
+					data: { type: "stateSaved" },
+					origin: `${window.location.origin}.evil.com`,
+				})
+			);
+		});
 		expect(mockShowToast).not.toHaveBeenCalled();
 	});
 
@@ -331,7 +344,7 @@ describe("EmulatorContent - messages, keyboard & UI interactions", () => {
 			window.dispatchEvent(
 				new MessageEvent("message", {
 					data: { type: "stateChanged", state: "playing" },
-					origin: window.location.host,
+					origin: window.location.origin,
 				})
 			);
 		});
