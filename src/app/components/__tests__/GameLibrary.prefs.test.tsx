@@ -47,3 +47,23 @@ describe("GameLibrary preferences and scan feedback", () => {
 		await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith("Found 2 new game(s)!", "success"));
 	});
 });
+
+describe("GameLibrary system filter persistence", () => {
+	beforeEach(() => localStorage.clear());
+
+	test("restores a saved system and drops unknown ones", async () => {
+		localStorage.setItem(PREFS_KEY, JSON.stringify({ system: "snes" }));
+		mockFetch({ success: true, data: { added: 0 } });
+		const { unmount } = render(<GameLibrary onSelectGame={() => {}} />);
+		await waitFor(() =>
+			expect(JSON.parse(localStorage.getItem(PREFS_KEY) || "{}").system).toBe("snes")
+		);
+		unmount();
+
+		localStorage.setItem(PREFS_KEY, JSON.stringify({ system: "dreamcast" }));
+		render(<GameLibrary onSelectGame={() => {}} />);
+		await waitFor(() =>
+			expect(JSON.parse(localStorage.getItem(PREFS_KEY) || "{}").system).toBe("all")
+		);
+	});
+});
