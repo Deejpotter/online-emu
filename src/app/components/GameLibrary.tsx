@@ -10,6 +10,7 @@
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { GameCard } from "./GameCard";
+import { useToast } from "./Toast";
 import type { Game, EmulatorSystem } from "@/types";
 
 interface GameLibraryProps {
@@ -47,6 +48,25 @@ const SYSTEM_BADGE_COLORS: Record<string, string> = {
 	n64: "bg-yellow-700",
 };
 
+const PREFS_KEY = "online-emu:library-prefs";
+
+/**
+ * Read saved view/sort preferences. Storage can be blocked, so fail quietly.
+ */
+function loadPrefs(): { viewMode?: ViewMode; sortMode?: SortMode } {
+	try {
+		const raw = localStorage.getItem(PREFS_KEY);
+		if (!raw) return {};
+		const parsed = JSON.parse(raw);
+		return {
+			viewMode: ["grid", "list"].includes(parsed.viewMode) ? parsed.viewMode : undefined,
+			sortMode: ["alpha", "recent", "system"].includes(parsed.sortMode) ? parsed.sortMode : undefined,
+		};
+	} catch {
+		return {};
+	}
+}
+
 const ALPHABET = "#ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
 export function GameLibrary({ onSelectGame }: GameLibraryProps) {
@@ -60,6 +80,26 @@ export function GameLibrary({ onSelectGame }: GameLibraryProps) {
 	const [scanning, setScanning] = useState(false);
 	const [viewMode, setViewMode] = useState<ViewMode>("grid");
 	const [sortMode, setSortMode] = useState<SortMode>("alpha");
+	const [prefsLoaded, setPrefsLoaded] = useState(false);
+	const { showToast } = useToast();
+
+	// Restore saved view/sort preferences after mount (avoids hydration mismatch)
+	useEffect(() => {
+		const prefs = loadPrefs();
+		if (prefs.viewMode) setViewMode(prefs.viewMode);
+		if (prefs.sortMode) setSortMode(prefs.sortMode);
+		setPrefsLoaded(true);
+	}, []);
+
+	// Persist view/sort preferences once the saved ones have been applied
+	useEffect(() => {
+		if (!prefsLoaded) return;
+		try {
+			localStorage.setItem(PREFS_KEY, JSON.stringify({ viewMode, sortMode }));
+		} catch {
+			// Storage unavailable (private mode etc.), preferences just won't stick
+		}
+	}, [viewMode, sortMode, prefsLoaded]);
 
 	// Refs for alphabet jump navigation
 	const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -109,15 +149,15 @@ export function GameLibrary({ onSelectGame }: GameLibraryProps) {
 				await fetchGames();
 
 				if (result.data.added > 0) {
-					alert(`Found ${result.data.added} new game(s)!`);
+					showToast(`Found ${result.data.added} new game(s)!`, "success");
 				} else {
-					alert("No new games found.");
+					showToast("No new games found.", "info");
 				}
 			} else {
-				alert(`Scan failed: ${result.error}`);
+				showToast(`Scan failed: ${result.error}`, "error");
 			}
 		} catch (err) {
-			alert("Failed to scan for ROMs");
+			showToast("Failed to scan for ROMs", "error");
 			console.error("[GameLibrary] Scan error:", err);
 		} finally {
 			setScanning(false);
