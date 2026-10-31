@@ -53,7 +53,7 @@ const PREFS_KEY = "online-emu:library-prefs";
 /**
  * Read saved view/sort preferences. Storage can be blocked, so fail quietly.
  */
-function loadPrefs(): { viewMode?: ViewMode; sortMode?: SortMode } {
+function loadPrefs(): { viewMode?: ViewMode; sortMode?: SortMode; system?: EmulatorSystem | "all" } {
 	try {
 		const raw = localStorage.getItem(PREFS_KEY);
 		if (!raw) return {};
@@ -61,6 +61,7 @@ function loadPrefs(): { viewMode?: ViewMode; sortMode?: SortMode } {
 		return {
 			viewMode: ["grid", "list"].includes(parsed.viewMode) ? parsed.viewMode : undefined,
 			sortMode: ["alpha", "recent", "system"].includes(parsed.sortMode) ? parsed.sortMode : undefined,
+			system: parsed.system === "all" || parsed.system in SYSTEM_NAMES ? parsed.system : undefined,
 		};
 	} catch {
 		return {};
@@ -83,23 +84,24 @@ export function GameLibrary({ onSelectGame }: GameLibraryProps) {
 	const [prefsLoaded, setPrefsLoaded] = useState(false);
 	const { showToast } = useToast();
 
-	// Restore saved view/sort preferences after mount (avoids hydration mismatch)
+	// Restore saved view/sort/system preferences after mount (avoids hydration mismatch)
 	useEffect(() => {
 		const prefs = loadPrefs();
 		if (prefs.viewMode) setViewMode(prefs.viewMode);
 		if (prefs.sortMode) setSortMode(prefs.sortMode);
+		if (prefs.system) setSelectedSystem(prefs.system);
 		setPrefsLoaded(true);
 	}, []);
 
-	// Persist view/sort preferences once the saved ones have been applied
+	// Persist view/sort/system preferences once the saved ones have been applied
 	useEffect(() => {
 		if (!prefsLoaded) return;
 		try {
-			localStorage.setItem(PREFS_KEY, JSON.stringify({ viewMode, sortMode }));
+			localStorage.setItem(PREFS_KEY, JSON.stringify({ viewMode, sortMode, system: selectedSystem }));
 		} catch {
 			// Storage unavailable (private mode etc.), preferences just won't stick
 		}
-	}, [viewMode, sortMode, prefsLoaded]);
+	}, [viewMode, sortMode, selectedSystem, prefsLoaded]);
 
 	// Refs for alphabet jump navigation
 	const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
