@@ -90,8 +90,29 @@ export function GameLibrary({ onSelectGame }: GameLibraryProps) {
 		if (prefs.viewMode) setViewMode(prefs.viewMode);
 		if (prefs.sortMode) setSortMode(prefs.sortMode);
 		if (prefs.system) setSelectedSystem(prefs.system);
+
+		// URL params (?q=&system=) win over saved prefs so shared links open as sent
+		const params = new URLSearchParams(window.location.search);
+		const urlQuery = params.get("q");
+		const urlSystem = params.get("system");
+		if (urlQuery) setSearchQuery(urlQuery);
+		if (urlSystem && (urlSystem === "all" || urlSystem in SYSTEM_NAMES)) {
+			setSelectedSystem(urlSystem as EmulatorSystem | "all");
+		}
 		setPrefsLoaded(true);
 	}, []);
+
+	// Mirror search and system filter into the URL without adding history entries
+	useEffect(() => {
+		if (!prefsLoaded) return;
+		const params = new URLSearchParams(window.location.search);
+		if (searchQuery) params.set("q", searchQuery);
+		else params.delete("q");
+		if (selectedSystem !== "all") params.set("system", selectedSystem);
+		else params.delete("system");
+		const qs = params.toString();
+		window.history.replaceState(null, "", `${window.location.pathname}${qs ? `?${qs}` : ""}${window.location.hash}`);
+	}, [searchQuery, selectedSystem, prefsLoaded]);
 
 	// Persist view/sort/system preferences once the saved ones have been applied
 	useEffect(() => {
