@@ -1,5 +1,4 @@
 import React from "react";
-import React from "react";
 import {
 	render,
 	screen,
@@ -119,14 +118,14 @@ describe("EmulatorContent - messages, keyboard & UI interactions", () => {
 		fireEvent.keyDown(window, { code: "ArrowUp" });
 		expect(postSpy).toHaveBeenCalledWith(
 			{ type: "input", button: "up", pressed: true },
-			"*"
+			window.location.origin
 		);
 
 		// keyup ArrowUp
 		fireEvent.keyUp(window, { code: "ArrowUp" });
 		expect(postSpy).toHaveBeenCalledWith(
 			{ type: "input", button: "up", pressed: false },
-			"*"
+			window.location.origin
 		);
 	});
 
@@ -351,8 +350,8 @@ describe("EmulatorContent - messages, keyboard & UI interactions", () => {
 
 		// save & load buttons should now be visible
 		fireEvent.click(screen.getByText("💾 Save"));
-		expect(postSpy).toHaveBeenCalledWith({ type: "saveState" }, "*");
+		expect(postSpy).toHaveBeenCalledWith({ type: "saveState" }, window.location.origin);
 		fireEvent.click(screen.getByText("📂 Load"));
-		expect(postSpy).toHaveBeenCalledWith({ type: "loadState" }, "*");
+		expect(postSpy).toHaveBeenCalledWith({ type: "loadState" }, window.location.origin);
 	});
 });
