@@ -50,7 +50,7 @@ interface EmulatorAnalogMessage {
 }
 
 interface EmulatorControlMessage {
-	type: "saveState" | "loadState" | "pause" | "resume" | "getCanvas";
+	type: "saveState" | "loadState" | "pause" | "resume" | "getCanvas" | "flushSave";
 }
 
 interface EmulatorVolumeMessage {
@@ -91,6 +91,9 @@ type EmulatorIncomingMessage =
 	| { type: "stateLoaded" }
 	| { type: "srmSaveStarted" }
 	| { type: "srmSaveComplete"; success?: boolean }
+	| { type: "serverSaveComplete"; success?: boolean }
+	| { type: "autoSaveDisabled"; kind?: "state" | "srm" }
+	| { type: "flushSaveComplete"; state?: boolean; srm?: boolean }
 	| { type: "canvasInfo"; width: number; height: number };
 
 /**
@@ -127,6 +130,12 @@ const KEYBOARD_MAP: Record<string, string> = {
 	Space: "a", // Alternative for A button
 };
 
+/** Consecutive failed server saves before the player is warned */
+const SAVE_FAILURE_WARN_AT = 2;
+
+/** How long the Back button waits for the leaving save before navigating anyway */
+const LEAVE_SAVE_TIMEOUT_MS = 4000;
+
 export function EmulatorContent() {
 	const searchParams = useSearchParams();
 	const { showToast } = useToast();
@@ -139,6 +148,10 @@ export function EmulatorContent() {
 	const [showControls, setShowControls] = useState(true);
 	const iframeRef = useRef<HTMLIFrameElement>(null);
 	const containerRef = useRef<HTMLDivElement>(null);
+	const saveFailuresRef = useRef(0);
+	const autoSaveWarnedRef = useRef(false);
+	const leaveResolverRef = useRef<(() => void) | null>(null);
+	const [leaving, setLeaving] = useState(false);
 
 	// Get game ID from URL params
 	const gameId = searchParams.get("id");
@@ -148,7 +161,7 @@ export function EmulatorContent() {
 	 */
 	const sendToEmulator = useCallback((message: EmulatorOutgoingMessage) => {
 		if (iframeRef.current?.contentWindow) {
-			iframeRef.current.contentWindow.postMessage(message, "*");
+			iframeRef.current.contentWindow.postMessage(message, window.location.origin);
 		}
 	}, []);
 
@@ -214,6 +227,32 @@ export function EmulatorContent() {
 					}
 					break;
 
+				case "serverSaveComplete":
+					// Warn once after repeated failures; a success resets the count
+					if ((data as { success?: boolean }).success) {
+						saveFailuresRef.current = 0;
+					} else {
+						saveFailuresRef.current += 1;
+						if (saveFailuresRef.current === SAVE_FAILURE_WARN_AT) {
+							showToast("Saving to the server keeps failing. Check your connection.", "error");
+						}
+					}
+					break;
+
+				case "autoSaveDisabled":
+					if (!autoSaveWarnedRef.current) {
+						autoSaveWarnedRef.current = true;
+						showToast(
+							"Couldn't restore your save from the server, so automatic saving is off for this session.",
+							"error"
+						);
+					}
+					break;
+
+				case "flushSaveComplete":
+					leaveResolverRef.current?.();
+					break;
+
 				case "srmSaveStarted":
 					// ephemeral indicator that the iframe has started uploading SRM
 					console.log("[Emulator] SRM save started", data);
@@ -222,6 +261,31 @@ export function EmulatorContent() {
 			}
 		},
 		[game, showToast]
+	);
+
+	/**
+	 * Back to the library: ask the emulator to save first (through its save
+	 * guard), then do a full page load. Navigates anyway after a timeout.
+	 */
+	const handleBack = useCallback(
+		(event: React.MouseEvent<HTMLAnchorElement>) => {
+			if (emulatorState !== "playing" && emulatorState !== "paused") return;
+			event.preventDefault();
+			if (leaving) return;
+			setLeaving(true);
+
+			const href = event.currentTarget.href;
+			const done = new Promise<void>((resolve) => {
+				leaveResolverRef.current = resolve;
+				setTimeout(resolve, LEAVE_SAVE_TIMEOUT_MS);
+			});
+			sendToEmulator({ type: "flushSave" });
+			done.then(() => {
+				leaveResolverRef.current = null;
+				window.location.assign(href);
+			});
+		},
+		[emulatorState, leaving, sendToEmulator]
 	);
 
 	/**
@@ -395,9 +459,11 @@ export function EmulatorContent() {
 						{/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
 						<a
 							href="/"
+							onClick={handleBack}
+							aria-busy={leaving}
 							className="text-zinc-400 hover:text-white transition-colors shrink-0 text-sm md:text-base"
 						>
-							← Back
+							{leaving ? "Saving..." : "← Back"}
 						</a>
 						{showControls && (
 							<div className="min-w-0">
