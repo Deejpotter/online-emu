@@ -123,6 +123,7 @@
     <!-- EmulatorJS container -->
     <div id="game"></div>
 
+    <script src="/save-guard.js"></script>
     <script>
         /**
          * EmulatorJS Static Host Page
@@ -179,6 +180,30 @@
          * @param {number} slot - Save slot (0 = quick save)
          * @returns {Promise<boolean>} Success
          */
+        // Blocks automatic saves until the server copy has been restored
+        // If save-guard.js failed to load, fail safe: block automatic saves, keep the page working
+        const saveGuard = window.SaveGuard
+            ? window.SaveGuard.createSaveGuard()
+            : { markRestore() {}, canAutoSave() { return false; } };
+
+        // Automatic save paths (blur, tab hidden, page close, periodic timer).
+        // Manual saves call saveToServer/saveSrmToServer directly.
+        function autoSaveState(reason) {
+            if (!saveGuard.canAutoSave('state')) {
+                console.log('[Server Save] Skipping automatic save (restore not settled):', reason);
+                return Promise.resolve(false);
+            }
+            return saveToServer(0);
+        }
+
+        function autoSaveSrm(reason) {
+            if (!saveGuard.canAutoSave('srm')) {
+                console.log('[Server SRM] Skipping automatic save (restore not settled):', reason);
+                return Promise.resolve(false);
+            }
+            return saveSrmToServer();
+        }
+
         async function saveToServer(slot = 0) {
             if (isSaving) {
                 console.log('[Server Save] Already saving, skipping...');
@@ -222,6 +247,8 @@
                 if (response.ok) {
                     const result = await response.json();
                     console.log('[Server Save] ✅ Save successful:', result);
+                    // The server now holds a state the player chose, so later automatic saves are safe
+                    saveGuard.markRestore('state', 'loaded');
                     // Show visual confirmation
                     if (ejs.displayMessage) {
                         ejs.displayMessage('STATE SAVED TO SERVER');
@@ -267,6 +294,7 @@
 
                 if (response.status === 404) {
                     console.log('[Server Save] No save file found on server (this is normal for new games)');
+                    saveGuard.markRestore('state', 'none');
                     return false;
                 }
 
@@ -336,6 +364,7 @@
                     ejs.displayMessage('STATE LOADED FROM SERVER');
                 }
                 console.log('[Server Save] ✅ Load successful');
+                saveGuard.markRestore('state', 'loaded');
                 sendToParent({ type: 'serverLoadComplete', slot, success: true });
                 return true;
             } catch (e) {
@@ -453,6 +482,7 @@
 
                 if (response.status === 404) {
                     console.log('[Server SRM] No SRM file found on server (this is normal for new games)');
+                    saveGuard.markRestore('srm', 'none');
                     return false;
                 }
 
@@ -509,6 +539,7 @@
                 }
 
                 console.log('[Server SRM] ✅ Load successful');
+                saveGuard.markRestore('srm', 'loaded');
                 sendToParent({ type: 'srmLoadComplete', success: true });
                 return true;
             } catch (e) {
@@ -717,7 +748,7 @@
             if (srmDebounceTimer) clearTimeout(srmDebounceTimer);
             srmDebounceTimer = setTimeout(async () => {
                 srmDebounceTimer = null;
-                await saveSrmToServer();
+                await autoSaveSrm('debounced');
             }, SAVE_DEBOUNCE_MS);
         }
 
@@ -741,8 +772,8 @@
         document.addEventListener('visibilitychange', async function () {
             if (document.visibilityState === 'hidden') {
                 console.log('[Server] Tab hidden - saving state and SRM...');
-                await saveToServer(0);
-                await saveSrmToServer();
+                await autoSaveState('tab hidden');
+                await autoSaveSrm('tab hidden');
                 triggerSaveFlush('Tab hidden');
             }
         });
@@ -750,8 +781,8 @@
         // Trigger server save on window blur
         window.addEventListener('blur', async function () {
             console.log('[Server] Window blur - saving state and SRM...');
-            await saveToServer(0);
-            await saveSrmToServer();
+            await autoSaveState('window blur');
+            await autoSaveSrm('window blur');
             triggerSaveFlush('Window blur');
         });
 
@@ -760,8 +791,8 @@
             console.log('[Server] Page hide - saving state and SRM...');
             // Note: Can't await here since page is unloading
             // But we'll try anyway - it may complete in time
-            saveToServer(0);
-            saveSrmToServer();
+            autoSaveState('page hide');
+            autoSaveSrm('page hide');
             triggerSaveFlush('Page hide');
         });
 
@@ -769,8 +800,8 @@
         // Saves are event-driven — SRM is already persisted when the game writes it.
         // A confirm dialog here is misleading and blocks the save from completing.
         window.addEventListener('beforeunload', function () {
-            saveToServer(0);
-            saveSrmToServer();
+            autoSaveState('beforeunload');
+            autoSaveSrm('beforeunload');
             triggerSaveFlush('beforeunload');
         });
 
@@ -989,7 +1020,7 @@
                     return;
                 }
                 console.log('[Server Save] ⏰ Auto-saving state...');
-                const ok = await saveToServer(0);
+                const ok = await autoSaveState('interval');
                 if (ok) {
                     console.log('[Server Save] ✅ Auto-save complete');
                 } else {
@@ -997,7 +1028,7 @@
                 }
                 // Also flush SRM in case the game wrote in-game save data
                 // that didn't trigger EJS_onSaveUpdate (some cores are inconsistent)
-                await saveSrmToServer();
+                await autoSaveSrm('interval');
             }, AUTO_SAVE_INTERVAL_MS);
             console.log('[Server Save] Auto-save started (every 60s)');
 
