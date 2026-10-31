@@ -263,6 +263,7 @@
                 }
             } catch (e) {
                 console.error('[Server Save] ❌ Exception during save:', e);
+                sendToParent({ type: 'serverSaveComplete', slot, success: false, error: String(e) });
                 return false;
             } finally {
                 isSaving = false;
@@ -561,7 +562,7 @@
         // Send message to parent window
         function sendToParent(message) {
             if (window.parent && window.parent !== window) {
-                window.parent.postMessage(message, '*');
+                window.parent.postMessage(message, window.location.origin);
             }
         }
 
@@ -969,6 +970,9 @@
                             console.log('[Server SRM] ✅ Restored in-game saves from server (retry)');
                         } else {
                             console.log('[Server SRM] No previous in-game saves found (new game)');
+                            if (!saveGuard.canAutoSave('srm')) {
+                                sendToParent({ type: 'autoSaveDisabled', kind: 'srm' });
+                            }
                         }
                     }, 1000);
                 }
@@ -996,6 +1000,9 @@
                             if (typeof ejs.displayMessage === 'function') ejs.displayMessage('SAVE RESTORED');
                         } else {
                             console.log('[Server Save] No previous save state found (new game)');
+                            if (!saveGuard.canAutoSave('state')) {
+                                sendToParent({ type: 'autoSaveDisabled', kind: 'state' });
+                            }
                         }
                         return;
                     }
@@ -1003,6 +1010,7 @@
                     elapsed += POLL_INTERVAL_MS;
                 }
                 console.warn('[Server Save] ⚠️ Timed out waiting for core to be ready for auto-load');
+                sendToParent({ type: 'autoSaveDisabled', kind: 'state' });
             })();
 
             // =====================================================================
@@ -1096,6 +1104,8 @@
 
         // Handle incoming messages from parent
         window.addEventListener('message', function (event) {
+            // Only accept commands from our own app (the parent play page)
+            if (event.origin !== window.location.origin) return;
             const data = event.data;
             if (!data || !data.type) return;
 
@@ -1125,6 +1135,13 @@
                         if (success) {
                             sendToParent({ type: 'stateSaved' });
                         }
+                    });
+                    break;
+
+                case 'flushSave':
+                    // Leaving the game: save through the guard so an unrestored save is never overwritten
+                    Promise.all([autoSaveState('leaving'), autoSaveSrm('leaving')]).then(([state, srm]) => {
+                        sendToParent({ type: 'flushSaveComplete', state, srm });
                     });
                     break;
 
