@@ -103,6 +103,21 @@ export function GameLibrary({ onSelectGame }: GameLibraryProps) {
 
 	// Refs for alphabet jump navigation
 	const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
+	const searchInputRef = useRef<HTMLInputElement>(null);
+
+	// "/" focuses search unless the user is already typing somewhere
+	useEffect(() => {
+		const handleKeyDown = (e: KeyboardEvent) => {
+			if (e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey) return;
+			const target = e.target as HTMLElement | null;
+			const tag = target?.tagName;
+			if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || target?.isContentEditable) return;
+			e.preventDefault();
+			searchInputRef.current?.focus();
+		};
+		window.addEventListener("keydown", handleKeyDown);
+		return () => window.removeEventListener("keydown", handleKeyDown);
+	}, []);
 
 	// Fetch games on mount
 	useEffect(() => {
@@ -383,9 +398,17 @@ export function GameLibrary({ onSelectGame }: GameLibraryProps) {
 					<div className="relative flex-1">
 						<input
 							type="text"
-							placeholder="Search games..."
+							ref={searchInputRef}
+							placeholder="Search games... (press /)"
+							aria-label="Search games"
 							value={searchQuery}
 							onChange={(e) => setSearchQuery(e.target.value)}
+							onKeyDown={(e) => {
+								// Escape clears the search, a second press leaves the field
+								if (e.key !== "Escape") return;
+								if (searchQuery) setSearchQuery("");
+								else e.currentTarget.blur();
+							}}
 							className="
 								w-full px-4 py-2.5 pl-10
 								bg-zinc-800 border border-zinc-700 rounded-lg
