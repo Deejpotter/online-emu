@@ -10,15 +10,15 @@ branch from `main`, implement with a test, run `jest`, `eslint` and
 |---|--------|-----|
 | 1 | Library scan feedback uses toasts instead of `alert()`; grid/list view and sort mode saved in localStorage | #4, #5 |
 | 2 | `/` focuses library search, Escape clears it then leaves the field | #6, #7 |
-| 3 | System filter remembered with view and sort prefs | see PR |
+| 3 | System filter remembered with view and sort prefs | #10, #11 |
+| 4 | Search and system filter synced to the URL (`?q=&system=`) so views can be bookmarked or shared | see PR |
 
 ## Next up (candidates)
 
 1. **Continue playing row**: show recently played games at the top of the library (needs last-played data from saves or local history).
-2. **Search in URL**: sync search query and system filter to the query string so a filtered view can be bookmarked or shared.
-3. **Fix pre-existing type errors** in test files (`tsc --noEmit` reports 8, mostly Buffer/Uint8Array typing and a duplicate React import).
-4. **Clean lint warnings** (unused variables in library tests).
-5. **Wrap async state updates in tests with `act`** to remove noisy React warnings in EmulatorContent tests.
+2. **Fix pre-existing type errors** in test files (`tsc --noEmit` reports 8, mostly Buffer/Uint8Array typing and a duplicate React import).
+3. **Clean lint warnings** (unused variables in library tests).
+4. **Wrap async state updates in tests with `act`** to remove noisy React warnings in EmulatorContent tests.
 
 ## Notes
 
