@@ -68,6 +68,8 @@ function loadPrefs(): { viewMode?: ViewMode; sortMode?: SortMode; system?: Emula
 	}
 }
 
+const RECENT_LIMIT = 6;
+
 const ALPHABET = "#ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
 export function GameLibrary({ onSelectGame }: GameLibraryProps) {
@@ -236,6 +238,17 @@ export function GameLibrary({ onSelectGame }: GameLibraryProps) {
 			return true;
 		});
 	}, [games, selectedSystem, searchQuery]);
+
+	// Most recently played games for the "Continue playing" row
+	const recentGames = useMemo(() => {
+		return games
+			.filter((game) => game.lastPlayed)
+			.sort(
+				(a, b) =>
+					new Date(b.lastPlayed!).getTime() - new Date(a.lastPlayed!).getTime()
+			)
+			.slice(0, RECENT_LIMIT);
+	}, [games]);
 
 	// Sort games based on selected sort mode
 	const sortedGames = useMemo(() => {
@@ -581,6 +594,20 @@ export function GameLibrary({ onSelectGame }: GameLibraryProps) {
 						Try adjusting your search or filter criteria.
 					</p>
 				</div>
+			)}
+
+			{/* Continue Playing - only on the unfiltered view so it never hides results */}
+			{recentGames.length > 0 && !searchQuery && selectedSystem === "all" && (
+				<section aria-labelledby="continue-playing-heading">
+					<h2 id="continue-playing-heading" className="text-lg font-semibold mb-2">
+						Continue playing
+					</h2>
+					<div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+						{recentGames.map((game) => (
+							<GameCard key={game.id} game={game} onSelect={onSelectGame} />
+						))}
+					</div>
+				</section>
 			)}
 
 			{/* Games Display - with alphabet sidebar on large screens */}
