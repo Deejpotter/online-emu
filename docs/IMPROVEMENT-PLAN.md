@@ -25,7 +25,8 @@ branch from `main`, implement with a test, run `jest`, `eslint` and
 | 8 | Deploy fix: `/save-guard.js` was redirected to `/profiles` in production (turning automatic saves off for everyone); fonts bundled via `geist` so builds no longer fetch Google Fonts | #20, #21 |
 | 9 | Release pipeline: CI (lint, test, build) on PRs into `dev` and `main`; `npm run verify:deploy <url>` post-deploy check; `R2_SAVE_PREFIX` so staging keeps its own saves | #22 |
 | 10 | `verify:deploy` ignores the bot-detection script Cloudflare injects into HTML; staging app `online-emu-staging` created and verified | #23, #24 |
-| 11 | Saves/SRM APIs reject unknown profile ids (401); EmulatorJS pinned to 4.2.3 (CDN files match the committed copy); Docker build uses the image's yarn instead of fetching it; CI typechecks; 0 `tsc` errors, 0 lint warnings, 0 `act` warnings | see PR |
+| 11 | Saves/SRM APIs reject unknown profile ids (401); EmulatorJS pinned to 4.2.3 (CDN files match the committed copy); Docker build uses the image's yarn instead of fetching it; CI typechecks; 0 `tsc` errors, 0 lint warnings, 0 `act` warnings | #26, #27 |
+| 12 | Manual save slots 1 to 3 on the play page (slot 0 stays the automatic save); the chosen slot is remembered; loading an empty slot is reported | see PR |
 
 ## Next up (candidates)
 
@@ -36,9 +37,8 @@ branch from `main`, implement with a test, run `jest`, `eslint` and
 
 ### Library and code health
 
-1. **Fix pre-existing type errors** in test files (`tsc --noEmit` reports 6, Buffer/Uint8Array typing in API tests).
-2. **Clean lint warnings** (unused variables in library tests).
-3. **Wrap async state updates in tests with `act`** to remove noisy React warnings in EmulatorContent tests.
+1. **Favourites**: star games in the library and filter to them. Needs per-profile storage (a `favourites` table or column), so it is an API plus a migration.
+2. **Save slot overview**: show which manual slots hold a save (needs a list endpoint for `/api/saves`).
 
 ## Notes
 

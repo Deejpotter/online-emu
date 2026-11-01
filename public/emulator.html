@@ -288,6 +288,7 @@
             }
 
             isLoading = true;
+            lastLoadStatus = 'error';
             try {
                 console.log(`[Server Save] Loading from server (slot ${slot})...`);
 
@@ -295,7 +296,9 @@
 
                 if (response.status === 404) {
                     console.log('[Server Save] No save file found on server (this is normal for new games)');
-                    saveGuard.markRestore('state', 'none');
+                    lastLoadStatus = 'empty';
+                    // Only the automatic slot says anything about whether auto-saving is safe
+                    if (slot === 0) saveGuard.markRestore('state', 'none');
                     return false;
                 }
 
@@ -365,6 +368,7 @@
                     ejs.displayMessage('STATE LOADED FROM SERVER');
                 }
                 console.log('[Server Save] ✅ Load successful');
+                lastLoadStatus = 'ok';
                 saveGuard.markRestore('state', 'loaded');
                 sendToParent({ type: 'serverLoadComplete', slot, success: true });
                 return true;
@@ -560,6 +564,14 @@
         const errorEl = document.getElementById('error');
 
         // Send message to parent window
+        // Slot requested by the parent page; anything odd falls back to the automatic slot 0
+        function pickSlot(value) {
+            return Number.isInteger(value) && value >= 0 && value <= 9 ? value : 0;
+        }
+
+        // Why the last loadFromServer() returned false: 'empty' (no save) or 'error'
+        let lastLoadStatus = 'ok';
+
         function sendToParent(message) {
             if (window.parent && window.parent !== window) {
                 window.parent.postMessage(message, window.location.origin);
@@ -1123,20 +1135,22 @@
                     handleAnalog(data.stick, data.x, data.y);
                     break;
 
-                case 'saveState':
-                    console.log('[EmulatorJS] Save state requested');
+                case 'saveState': {
+                    const saveSlot = pickSlot(data.slot);
+                    console.log('[EmulatorJS] Save state requested, slot', saveSlot);
                     if (!ejs || !ejs.gameManager) {
                         console.warn('[EmulatorJS] Emulator not ready for save');
                         break;
                     }
                     // Save to server using the proper getState() method
-                    saveToServer(0).then(success => {
-                        console.log('[EmulatorJS] Server save result:', success);
+                    saveToServer(saveSlot).then(success => {
+                        console.log('[EmulatorJS] Server save result:', success, 'slot', saveSlot);
                         if (success) {
-                            sendToParent({ type: 'stateSaved' });
+                            sendToParent({ type: 'stateSaved', slot: saveSlot });
                         }
                     });
                     break;
+                }
 
                 case 'flushSave':
                     // Leaving the game: save through the guard so an unrestored save is never overwritten
@@ -1145,20 +1159,24 @@
                     });
                     break;
 
-                case 'loadState':
-                    console.log('[EmulatorJS] Load state requested');
+                case 'loadState': {
+                    const loadSlot = pickSlot(data.slot);
+                    console.log('[EmulatorJS] Load state requested, slot', loadSlot);
                     if (!ejs || !ejs.gameManager) {
                         console.warn('[EmulatorJS] Emulator not ready for load');
                         break;
                     }
                     // Load from server using the proper loadState() method
-                    loadFromServer(0).then(success => {
-                        console.log('[EmulatorJS] Server load result:', success);
+                    loadFromServer(loadSlot).then(success => {
+                        console.log('[EmulatorJS] Server load result:', success, 'slot', loadSlot);
                         if (success) {
-                            sendToParent({ type: 'stateLoaded' });
+                            sendToParent({ type: 'stateLoaded', slot: loadSlot });
+                        } else {
+                            sendToParent({ type: 'stateLoadFailed', slot: loadSlot, reason: lastLoadStatus });
                         }
                     });
                     break;
+                }
 
                 case 'pause':
                     if (ejs && ejs.gameManager) {

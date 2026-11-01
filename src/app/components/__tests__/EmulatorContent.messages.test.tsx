@@ -356,8 +356,8 @@ describe("EmulatorContent - messages, keyboard & UI interactions", () => {
 
 		// save & load buttons should now be visible
 		fireEvent.click(screen.getByText("💾 Save"));
-		expect(postSpy).toHaveBeenCalledWith({ type: "saveState" }, window.location.origin);
+		expect(postSpy).toHaveBeenCalledWith({ type: "saveState", slot: 1 }, window.location.origin);
 		fireEvent.click(screen.getByText("📂 Load"));
-		expect(postSpy).toHaveBeenCalledWith({ type: "loadState" }, window.location.origin);
+		expect(postSpy).toHaveBeenCalledWith({ type: "loadState", slot: 1 }, window.location.origin);
 	});
 });
