@@ -28,6 +28,7 @@ export function middleware(request: NextRequest) {
 		"/_next",
 		"/emulatorjs",
 		"/emulator.html",
+		"/save-guard.js",
 		"/manifest.json",
 		"/manifest.webmanifest",
 		"/sw.js",

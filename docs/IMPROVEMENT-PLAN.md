@@ -14,7 +14,8 @@ branch from `main`, implement with a test, run `jest`, `eslint` and
 | 4 | Search and system filter synced to the URL (`?q=&system=`) so views can be bookmarked or shared | #12, #13 |
 | 5 | "Continue playing" row of the 6 most recently played games on the unfiltered library view | #14, #15 |
 | 6 | Save guard: automatic saves wait until the server save has been restored; strict iframe message origin check | #16, #17 |
-| 7 | Back button saves before leaving; warnings for repeated save failures and when automatic saving is off; player page only accepts same-origin commands | see PR |
+| 7 | Back button saves before leaving; warnings for repeated save failures and when automatic saving is off; player page only accepts same-origin commands | #18, #19 |
+| 8 | Deploy fix: `/save-guard.js` was redirected to `/profiles` in production (turning automatic saves off for everyone); fonts bundled via `geist` so builds no longer fetch Google Fonts | see PR |
 
 ## Next up (candidates)
 
@@ -31,6 +32,9 @@ branch from `main`, implement with a test, run `jest`, `eslint` and
 3. **Wrap async state updates in tests with `act`** to remove noisy React warnings in EmulatorContent tests.
 
 ## Notes
+
+- After each merge to `main`, check the Coolify deployment actually finished (`/api/v1/deployments/applications/<uuid>`). A failed deploy leaves production on the old build while `main` looks shipped. Two deploys on 2026-10-31/11-01 failed on server DNS (webhook host lookup, Google Fonts fetch).
+- Any new file in `public/` that the player page loads must be added to `publicPaths` in `src/middleware.ts`, or it is redirected to `/profiles` for requests without a profile cookie (covered by `src/lib/__tests__/middleware.test.ts`).
 
 - There was no `dev` branch before this work; it was created from `main`.
 - Day Planner tracking is not connected in the cloud session, so this file is the record for now.
