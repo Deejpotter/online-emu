@@ -41,6 +41,16 @@ describe("verify-deploy", () => {
 		expect(results.find((r: { name: string }) => r.name === "/save-guard.js").detail).toMatch(/redirected/);
 	});
 
+	test("ignores the bot-detection script Cloudflare injects into HTML", async () => {
+		const injected =
+			"<html>v2<script>(function(){var d='window.__CF$cv$params={r:1}';})();</script></html>";
+		const { ok } = await verifyDeploy("https://example.test", {
+			fetch: fakeFetch({ ...healthy, "/emulator.html": { status: 200, type: "text/html", body: injected } }),
+			expectedEmulatorHtml: "<html>v2</html>",
+		});
+		expect(ok).toBe(true);
+	});
+
 	test("fails when the live player page is an older version", async () => {
 		const { ok } = await verifyDeploy("https://example.test", {
 			fetch: fakeFetch(healthy),
