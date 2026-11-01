@@ -23,9 +23,14 @@ branch from `main`, implement with a test, run `jest`, `eslint` and
 | 6 | Save guard: automatic saves wait until the server save has been restored; strict iframe message origin check | #16, #17 |
 | 7 | Back button saves before leaving; warnings for repeated save failures and when automatic saving is off; player page only accepts same-origin commands | #18, #19 |
 | 8 | Deploy fix: `/save-guard.js` was redirected to `/profiles` in production (turning automatic saves off for everyone); fonts bundled via `geist` so builds no longer fetch Google Fonts | #20, #21 |
-| 9 | Release pipeline: CI (lint, test, build) on PRs into `dev` and `main`; `npm run verify:deploy <url>` post-deploy check; `R2_SAVE_PREFIX` so staging keeps its own saves | see PR |
+| 9 | Release pipeline: CI (lint, test, build) on PRs into `dev` and `main`; `npm run verify:deploy <url>` post-deploy check; `R2_SAVE_PREFIX` so staging keeps its own saves | #22 |
+| 10 | `verify:deploy` ignores the bot-detection script Cloudflare injects into HTML; staging app `online-emu-staging` created and verified | see PR |
 
 ## Next up (candidates)
+
+### Next
+
+1. **Reject unknown profiles in the saves and SRM APIs**: `/api/saves` and `/api/srm` accept any `profileId` cookie, even one for a profile that doesn't exist (a staging check saved under `None`). Return 401 when the profile isn't in the database.
 
 ### Emulator stability (priority)
 

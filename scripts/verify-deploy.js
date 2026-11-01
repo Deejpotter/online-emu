@@ -29,6 +29,14 @@ const PLAYER_ASSETS = [
 ];
 
 /**
+ * Remove scripts Cloudflare injects into HTML responses (bot detection,
+ * `__CF$cv$params`), so the live page can be compared with the repo copy.
+ */
+function stripCloudflareInjections(html) {
+	return html.replace(/<script>\(function\(\)\{[^<]*__CF\$cv\$params[^<]*<\/script>/g, "");
+}
+
+/**
  * Run all checks against baseUrl.
  * @param {string} baseUrl
  * @param {{ fetch: typeof fetch, expectedEmulatorHtml?: string }} deps
@@ -59,7 +67,7 @@ async function verifyDeploy(baseUrl, { fetch, expectedEmulatorHtml }) {
 			record(asset.path, ok, detail);
 
 			if (asset.path === "/emulator.html" && expectedEmulatorHtml !== undefined && res.status === 200) {
-				const live = await res.text();
+				const live = stripCloudflareInjections(await res.text());
 				record(
 					"emulator.html is the expected version",
 					live === expectedEmulatorHtml,
@@ -105,4 +113,4 @@ if (require.main === module) {
 	});
 }
 
-module.exports = { verifyDeploy, PLAYER_ASSETS };
+module.exports = { verifyDeploy, stripCloudflareInjections, PLAYER_ASSETS };
