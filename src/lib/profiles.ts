@@ -73,6 +73,18 @@ export async function getProfileById(id: string): Promise<Profile | null> {
 	return profiles.find((p) => p.id === id) || null;
 }
 
+/**
+ * Whether a profile id refers to a real profile. Malformed ids (Postgres
+ * rejects non-UUIDs) and lookup errors count as "no such profile".
+ */
+export async function profileExists(id: string): Promise<boolean> {
+	try {
+		return (await getProfileById(id)) !== null;
+	} catch {
+		return false;
+	}
+}
+
 export async function createProfile(
 	data: CreateProfileRequest
 ): Promise<Profile> {

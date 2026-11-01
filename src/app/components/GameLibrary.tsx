@@ -726,6 +726,7 @@ export function GameLibrary({ onSelectGame }: GameLibraryProps) {
 																{/* Mini thumbnail or icon */}
 																<div className="w-12 h-12 flex-shrink-0 rounded bg-zinc-900 flex items-center justify-center overflow-hidden">
 																	{game.coverArt ? (
+																		// eslint-disable-next-line @next/next/no-img-element -- cover art URLs are arbitrary
 																		<img
 																			src={game.coverArt}
 																			alt=""
@@ -785,6 +786,7 @@ export function GameLibrary({ onSelectGame }: GameLibraryProps) {
 												{/* Mini thumbnail or icon */}
 												<div className="w-12 h-12 flex-shrink-0 rounded bg-zinc-900 flex items-center justify-center overflow-hidden">
 													{game.coverArt ? (
+														// eslint-disable-next-line @next/next/no-img-element -- cover art URLs are arbitrary
 														<img
 															src={game.coverArt}
 															alt=""

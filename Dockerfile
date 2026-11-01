@@ -6,8 +6,10 @@ RUN apk add --no-cache libc6-compat
 COPY package.json yarn.lock ./
 # Cache mount keeps downloaded packages between builds, so a lockfile change
 # only fetches what changed and a slow registry doesn't fail the build.
+# Use the image's bundled yarn; corepack would fetch yarn from npm on every build.
 RUN --mount=type=cache,target=/usr/local/share/.cache/yarn \
-	corepack enable && yarn install --frozen-lockfile --prefer-offline --network-timeout 600000
+	(command -v yarn >/dev/null || corepack enable) && \
+	yarn install --frozen-lockfile --prefer-offline --network-timeout 600000
 COPY . .
 # Next's incremental build cache survives between deploys.
 RUN --mount=type=cache,target=/app/.next/cache yarn build

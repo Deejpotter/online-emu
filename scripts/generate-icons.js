@@ -19,7 +19,7 @@ const path = require('path');
 let sharp;
 try {
     sharp = require('sharp');
-} catch (e) {
+} catch {
     console.log('Sharp not installed. Creating placeholder icons...');
     createPlaceholderIcons();
     process.exit(0);

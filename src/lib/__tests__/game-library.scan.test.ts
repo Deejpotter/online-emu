@@ -42,7 +42,7 @@ describe("game-library scan & initialization (filesystem integration)", () => {
 			if (filtered.length !== lib.games.length) {
 				await saveGameLibrary({ ...lib, games: filtered });
 			}
-		} catch (e) {
+		} catch {
 			// ignore
 		}
 
@@ -71,7 +71,7 @@ describe("game-library scan & initialization (filesystem integration)", () => {
 	test("scanForNewRoms discovers ROM files and creates entries", async () => {
 		const { scanForNewRoms, loadGameLibrary } = require("../game-library");
 
-		const before = await loadGameLibrary();
+		await loadGameLibrary();
 		const res = await scanForNewRoms();
 		expect(res.added).toBeGreaterThanOrEqual(2);
 

@@ -1,16 +1,17 @@
 /** @jest-environment node */
+jest.mock("@/lib/profiles", () => ({ profileExists: async (id: string) => id !== "ghost" }));
 import { GET, POST, DELETE } from "../[gameId]/route";
 import fs from "fs/promises";
 import path from "path";
 import { getGamesDirectory } from "@/lib/game-library";
 
-const makeReq = (profileId?: string, system?: string, body?: Buffer) => {
+const makeReq = (profileId?: string, system?: string, body?: Uint8Array) => {
 	const url = new URL("http://localhost/api/srm/test-game");
 	if (system) url.searchParams.set("system", system);
 	const req: any = {
 		nextUrl: { searchParams: url.searchParams },
 		cookies: {
-			get: (k: string) => (profileId ? { value: profileId } : undefined),
+			get: () => (profileId ? { value: profileId } : undefined),
 		},
 		arrayBuffer: async () => (body ? body.buffer : new ArrayBuffer(0)),
 	};
