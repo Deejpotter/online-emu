@@ -4,6 +4,13 @@ Small, testable improvements shipped one at a time. Workflow per item:
 branch from `main`, implement with a test, run `jest`, `eslint` and
 `next build`, PR into `dev`, merge, then PR `dev` into `main`.
 
+## Release flow
+
+1. Feature branch from `main`; PR into `dev` once lint, tests and build pass (CI runs on PRs into `dev` and `main`).
+2. Merging `dev` deploys staging (`online-emu-staging` in Coolify, `https://roms-staging.deejpotter.com`, `R2_SAVE_PREFIX=online-emu-staging`). Run `npm run verify:deploy https://roms-staging.deejpotter.com --ref origin/dev`.
+3. PR `dev` into `main`; Coolify deploys production. Run `npm run verify:deploy https://roms.deejpotter.com --ref origin/main`.
+4. From the cloud session, prefix the verify command with `NODE_USE_ENV_PROXY=1` so Node's fetch uses the proxy.
+
 ## Shipped
 
 | # | Change | PRs |
@@ -15,7 +22,8 @@ branch from `main`, implement with a test, run `jest`, `eslint` and
 | 5 | "Continue playing" row of the 6 most recently played games on the unfiltered library view | #14, #15 |
 | 6 | Save guard: automatic saves wait until the server save has been restored; strict iframe message origin check | #16, #17 |
 | 7 | Back button saves before leaving; warnings for repeated save failures and when automatic saving is off; player page only accepts same-origin commands | #18, #19 |
-| 8 | Deploy fix: `/save-guard.js` was redirected to `/profiles` in production (turning automatic saves off for everyone); fonts bundled via `geist` so builds no longer fetch Google Fonts | see PR |
+| 8 | Deploy fix: `/save-guard.js` was redirected to `/profiles` in production (turning automatic saves off for everyone); fonts bundled via `geist` so builds no longer fetch Google Fonts | #20, #21 |
+| 9 | Release pipeline: CI (lint, test, build) on PRs into `dev` and `main`; `npm run verify:deploy <url>` post-deploy check; `R2_SAVE_PREFIX` so staging keeps its own saves | see PR |
 
 ## Next up (candidates)
 

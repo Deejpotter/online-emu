@@ -21,7 +21,8 @@
     "verify:r2": "node scripts/verify-r2-flow.js --local",
     "migrate:profiles": "node scripts/migrate-profiles-to-postgres.js",
     "migrate:saves": "node scripts/migrate-saves-to-r2.js",
-    "clean": "rm -rf .next node_modules/.cache"
+    "clean": "rm -rf .next node_modules/.cache",
+    "verify:deploy": "node scripts/verify-deploy.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1079.0",
