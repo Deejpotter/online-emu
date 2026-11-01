@@ -1,13 +1,14 @@
 /** @jest-environment node */
+jest.mock("@/lib/profiles", () => ({ profileExists: async (id: string) => id !== "ghost" }));
 import { GET, POST, DELETE } from "../[gameId]/route";
 
-const makeReq = (profileId?: string, system?: string, body?: Buffer) => {
+const makeReq = (profileId?: string, system?: string, body?: Uint8Array) => {
 	const url = new URL("http://localhost/api/srm/test-game");
 	if (system) url.searchParams.set("system", system);
 	const req: any = {
 		nextUrl: { searchParams: url.searchParams },
 		cookies: {
-			get: (k: string) => (profileId ? { value: profileId } : undefined),
+			get: () => (profileId ? { value: profileId } : undefined),
 		},
 		arrayBuffer: async () => (body ? body.buffer : new ArrayBuffer(0)),
 	};
@@ -44,4 +45,9 @@ test("POST/GET/DELETE SRM lifecycle (profile required)", async () => {
 	});
 	const djson = await delRes.json();
 	expect(djson.success).toBe(true);
+});
+
+test("rejects a profile id that doesn't exist", async () => {
+	const res: any = await GET(makeReq("ghost", "gba"), { params: Promise.resolve({ gameId: "test-game" }) });
+	expect(res.status).toBe(401);
 });

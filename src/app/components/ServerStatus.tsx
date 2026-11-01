@@ -65,7 +65,7 @@ export function ServerStatus() {
 			} else {
 				setError(result.error);
 			}
-		} catch (err) {
+		} catch {
 			setError("Failed to fetch status");
 		} finally {
 			setLoading(false);

@@ -22,7 +22,8 @@ const fs = require("fs");
 const path = require("path");
 
 // Configuration
-const EMULATORJS_VERSION = "stable";
+// Pinned so re-running setup reproduces the committed files (matches public/emulatorjs/data/version.json)
+const EMULATORJS_VERSION = "4.2.3";
 const CDN_BASE = `https://cdn.emulatorjs.org/${EMULATORJS_VERSION}/data`;
 const DATA_DIR = path.join(__dirname, "..", "public", "emulatorjs", "data");
 
@@ -294,7 +295,7 @@ async function setup() {
   console.log("═══════════════════════════════════════════════════════════");
 
   if (failCount === 0) {
-    console.log("   ✅ EmulatorJS Setup Complete!");
+    console.log(`   ✅ EmulatorJS Setup Complete! (${successCount} core files)`);
   } else {
     console.log(`   ⚠️  Setup completed with ${failCount} missing cores`);
   }

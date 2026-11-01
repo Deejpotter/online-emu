@@ -12,9 +12,12 @@ import {
 	deleteSaveState,
 	getSaveStorageBackend,
 } from "@/lib/save-storage";
+import { profileExists } from "@/lib/profiles";
 
-function getProfileId(request: NextRequest): string | null {
-	return request.cookies.get("profileId")?.value || null;
+/** The selected profile id, or null when none is set or it doesn't exist. */
+async function getProfileId(request: NextRequest): Promise<string | null> {
+	const id = request.cookies.get("profileId")?.value;
+	return id && (await profileExists(id)) ? id : null;
 }
 
 export async function GET(
@@ -27,7 +30,7 @@ export async function GET(
 		const system = searchParams.get("system");
 		const slot = searchParams.get("slot") || "0";
 
-		const profileId = getProfileId(request);
+		const profileId = await getProfileId(request);
 		if (!profileId) {
 			return NextResponse.json(
 				{
@@ -104,7 +107,7 @@ export async function POST(
 		const system = searchParams.get("system");
 		const slot = searchParams.get("slot") || "0";
 
-		const profileId = getProfileId(request);
+		const profileId = await getProfileId(request);
 		if (!profileId) {
 			return NextResponse.json(
 				{
@@ -182,7 +185,7 @@ export async function DELETE(
 		const system = searchParams.get("system");
 		const slot = searchParams.get("slot") || "0";
 
-		const profileId = getProfileId(request);
+		const profileId = await getProfileId(request);
 		if (!profileId) {
 			return NextResponse.json(
 				{

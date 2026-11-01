@@ -56,7 +56,6 @@ describe("game-library helpers", () => {
 
 	test("deleteGame returns false for missing and true when present", async () => {
 		const lib = await loadGameLibrary();
-		const before = lib.games.length;
 		// ensure missing id returns false
 		expect(await deleteGame("no-id")).toBe(false);
 

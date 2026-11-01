@@ -101,7 +101,7 @@ if (typeof globalThis.TextEncoder === 'undefined') {
   try {
     const { TextEncoder } = require('util');
     globalThis.TextEncoder = TextEncoder;
-  } catch (e) {
+  } catch {
     globalThis.TextEncoder = class TextEncoder { encode(s) { return Buffer.from(String(s)); } };
   }
 }
@@ -124,7 +124,7 @@ try {
       };
     }
   }
-} catch (e) {
+} catch {
   // next/server may not be available while running isolated unit tests; ignore
 }
 

@@ -20,6 +20,12 @@ beforeEach(() => {
 	jest.clearAllMocks();
 });
 
+// Tests that don't need game data get a fetch that never settles, so no state
+// update lands after the test ends (tests that do need it override with spyOn)
+beforeEach(() => {
+	global.fetch = jest.fn(() => new Promise<Response>(() => {})) as jest.Mock;
+});
+
 describe("EmulatorContent - messages, keyboard & UI interactions", () => {
 	test("stateSaved/stateLoaded trigger toasts", async () => {
 		render(<EmulatorContent />);
@@ -330,7 +336,7 @@ describe("EmulatorContent - messages, keyboard & UI interactions", () => {
 				) as any
 			);
 
-		const { container } = render(<EmulatorContent />);
+		render(<EmulatorContent />);
 		await screen.findByTitle(/UI Buttons - EmulatorJS/i);
 		const iframe = screen.getByTitle(
 			/UI Buttons - EmulatorJS/i

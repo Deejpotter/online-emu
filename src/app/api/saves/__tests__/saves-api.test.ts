@@ -1,13 +1,14 @@
 /** @jest-environment node */
+jest.mock("@/lib/profiles", () => ({ profileExists: async (id: string) => id !== "ghost" }));
 import { GET, POST, DELETE } from "../[gameId]/route";
 
-const makeReq = (profileId?: string, system?: string, body?: ArrayBuffer) => {
+const makeReq = (profileId?: string, system?: string, body?: ArrayBuffer | Uint8Array) => {
 	const url = new URL("http://localhost/api/saves/test-game");
 	if (system) url.searchParams.set("system", system);
 	const req: any = {
 		nextUrl: { searchParams: url.searchParams },
 		cookies: {
-			get: (k: string) => (profileId ? { value: profileId } : undefined),
+			get: () => (profileId ? { value: profileId } : undefined),
 		},
 		arrayBuffer: async () => body || new ArrayBuffer(0),
 	};
@@ -40,4 +41,14 @@ test("POST/GET/DELETE save-state lifecycle (profile required)", async () => {
 	});
 	const djson = await delRes.json();
 	expect(djson.success).toBe(true);
+});
+
+test("rejects a profile id that doesn't exist", async () => {
+	const ctx = { params: Promise.resolve({ gameId: "test-game" }) };
+	const post: any = await POST(makeReq("ghost", "gba", new TextEncoder().encode("x")), ctx);
+	expect(post.status).toBe(401);
+	const get: any = await GET(makeReq("ghost", "gba"), { params: Promise.resolve({ gameId: "test-game" }) });
+	expect(get.status).toBe(401);
+	const del: any = await DELETE(makeReq("ghost", "gba"), { params: Promise.resolve({ gameId: "test-game" }) });
+	expect(del.status).toBe(401);
 });
