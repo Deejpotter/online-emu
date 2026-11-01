@@ -24,19 +24,15 @@ branch from `main`, implement with a test, run `jest`, `eslint` and
 | 7 | Back button saves before leaving; warnings for repeated save failures and when automatic saving is off; player page only accepts same-origin commands | #18, #19 |
 | 8 | Deploy fix: `/save-guard.js` was redirected to `/profiles` in production (turning automatic saves off for everyone); fonts bundled via `geist` so builds no longer fetch Google Fonts | #20, #21 |
 | 9 | Release pipeline: CI (lint, test, build) on PRs into `dev` and `main`; `npm run verify:deploy <url>` post-deploy check; `R2_SAVE_PREFIX` so staging keeps its own saves | #22 |
-| 10 | `verify:deploy` ignores the bot-detection script Cloudflare injects into HTML; staging app `online-emu-staging` created and verified | see PR |
+| 10 | `verify:deploy` ignores the bot-detection script Cloudflare injects into HTML; staging app `online-emu-staging` created and verified | #23, #24 |
+| 11 | Saves/SRM APIs reject unknown profile ids (401); EmulatorJS pinned to 4.2.3 (CDN files match the committed copy); Docker build uses the image's yarn instead of fetching it; CI typechecks; 0 `tsc` errors, 0 lint warnings, 0 `act` warnings | see PR |
 
 ## Next up (candidates)
 
-### Next
-
-1. **Reject unknown profiles in the saves and SRM APIs**: `/api/saves` and `/api/srm` accept any `profileId` cookie, even one for a profile that doesn't exist (a staging check saved under `None`). Return 401 when the profile isn't in the database.
-
 ### Emulator stability (priority)
 
-1. **Pin EmulatorJS**: `scripts/setup-emulatorjs.js` downloads from the `stable` channel. Production uses the committed 4.2.3 files, but re-running setup can silently change the emulator. Pin to `4.2.3` once the CDN path is confirmed (the CDN is blocked from the cloud session).
-2. **Smoke test the player**: a Playwright check that loads `/play` with a test ROM and confirms the `ready` message, once a legal test ROM and cores are available in CI.
-3. **Closing the tab still can't guarantee a save**: `pagehide`/`beforeunload` uploads can be cancelled by the browser. The Back button now saves first; closing the tab relies on the 60s auto-save and tab-hidden save.
+1. **Smoke test the player in CI**: a Playwright check that loads `/play` with a test ROM and confirms the `ready` message, once a legal test ROM and cores are available in CI.
+2. **Closing the tab still can't guarantee a save**: `pagehide`/`beforeunload` uploads can be cancelled by the browser. The Back button now saves first; closing the tab relies on the 60s auto-save and tab-hidden save.
 
 ### Library and code health
 

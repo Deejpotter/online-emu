@@ -85,6 +85,8 @@ export function GameCard({ game, onSelect }: GameCardProps) {
 			{/* Cover Art / Placeholder */}
 			<div className="aspect-4/3 bg-zinc-900 flex items-center justify-center relative">
 				{game.coverArt ? (
+					// Cover art comes from arbitrary URLs, so next/image (allow-listed hosts) does not fit
+					// eslint-disable-next-line @next/next/no-img-element
 					<img
 						src={game.coverArt}
 						alt={game.title}

@@ -84,15 +84,16 @@ Tests went from 69 to 97. `tsc --noEmit` errors went from 8 to 6.
 
 ## 7. Follow-ups
 
-| # | Item | Owner |
+| # | Item | Status |
 |---|---|---|
-| 1 | Fix DNS on the Coolify host (`/etc/docker/daemon.json` `"dns": ["1.1.1.1","8.8.8.8"]` or host resolver) and consider raising concurrent builds above 1 | Deej |
-| 2 | Manually play a game on staging and production: start with an existing save ("SAVE RESTORED"), switch tabs, press Back, reopen | Deej |
-| 3 | Reject unknown `profileId` cookies in `/api/saves` and `/api/srm` (staging accepted `None`) | next loop |
-| 4 | Pin EmulatorJS to `4.2.3` in `scripts/setup-emulatorjs.js` once the CDN path is confirmed | next loop |
-| 5 | Playwright smoke test of `/play` with a legal test ROM | next loop |
-| 6 | Remaining 6 `tsc` errors (Buffer/Uint8Array in API tests), lint warnings, `act` warnings | next loop |
-| 7 | Corepack fetches `yarn@latest` on every build (`EAI_AGAIN` hit it); pin the yarn version via `packageManager` in `package.json` | next loop |
+| 1 | Coolify host DNS (`EAI_AGAIN` on webhook host, Google Fonts, npm) | **Open, needs host access.** Set `"dns": ["1.1.1.1","8.8.8.8"]` in `/etc/docker/daemon.json` and restart Docker, or fix the host resolver. The Coolify API can't change it. |
+| 2 | One build slot, and a hung build held it for up to an hour | Done: `concurrent_builds` 1 to 2, `dynamic_timeout` 3600 to 1200s (Coolify API) |
+| 3 | Real play test of the save changes | Done: headless Chromium on staging with 1942 (NES). Game starts, restore settles, Save uploads, Back saves then leaves, reopen restores, blur auto-save runs after restore. Test profile and save removed. |
+| 4 | Reject unknown `profileId` cookies in `/api/saves` and `/api/srm` | Done (#26): 401; malformed ids count as unknown |
+| 5 | Pin EmulatorJS | Done (#26): `4.2.3`; CDN `loader.js` and `emulator.min.js` match the committed files byte for byte |
+| 6 | Corepack fetched `yarn@latest` on every build | Done (#26): uses the image's yarn, corepack only as a fallback |
+| 7 | `tsc` errors, lint warnings, `act` warnings | Done (#26): all at 0; CI now typechecks |
+| 8 | Playwright smoke test of `/play` in CI | Open: needs a legal test ROM in the repo or CI secrets |
 
 ## 8. Process changes now in place
 1. Feature branch from `main`, then PR into `dev`. CI runs lint, test and build, and the PR merges only when it passes.
