@@ -51,6 +51,8 @@ interface EmulatorAnalogMessage {
 
 interface EmulatorControlMessage {
 	type: "saveState" | "loadState" | "pause" | "resume" | "getCanvas" | "flushSave";
+	/** Save slot for saveState/loadState; 0 is the automatic slot */
+	slot?: number;
 }
 
 interface EmulatorVolumeMessage {
@@ -87,8 +89,9 @@ type EmulatorIncomingMessage =
 	| EmulatorReadyMessage
 	| EmulatorErrorMessage
 	| EmulatorStateMessage
-	| { type: "stateSaved" }
-	| { type: "stateLoaded" }
+	| { type: "stateSaved"; slot?: number }
+	| { type: "stateLoaded"; slot?: number }
+	| { type: "stateLoadFailed"; slot?: number; reason?: "empty" | "error" }
 	| { type: "srmSaveStarted" }
 	| { type: "srmSaveComplete"; success?: boolean }
 	| { type: "serverSaveComplete"; success?: boolean }
@@ -130,6 +133,10 @@ const KEYBOARD_MAP: Record<string, string> = {
 	Space: "a", // Alternative for A button
 };
 
+/** Manual save slots; slot 0 is reserved for the automatic save */
+const SAVE_SLOTS = [1, 2, 3] as const;
+const SLOT_KEY = "online-emu:save-slot";
+
 /** Consecutive failed server saves before the player is warned */
 const SAVE_FAILURE_WARN_AT = 2;
 
@@ -152,6 +159,25 @@ export function EmulatorContent() {
 	const autoSaveWarnedRef = useRef(false);
 	const leaveResolverRef = useRef<(() => void) | null>(null);
 	const [leaving, setLeaving] = useState(false);
+	const [saveSlot, setSaveSlot] = useState<number>(SAVE_SLOTS[0]);
+
+	// Remember the chosen slot across games; storage may be unavailable
+	useEffect(() => {
+		try {
+			const saved = Number(localStorage.getItem(SLOT_KEY));
+			if ((SAVE_SLOTS as readonly number[]).includes(saved)) setSaveSlot(saved);
+		} catch {
+			// ignore
+		}
+	}, []);
+	const chooseSlot = useCallback((slot: number) => {
+		setSaveSlot(slot);
+		try {
+			localStorage.setItem(SLOT_KEY, String(slot));
+		} catch {
+			// ignore
+		}
+	}, []);
 
 	// Get game ID from URL params
 	const gameId = searchParams.get("id");
@@ -208,15 +234,28 @@ export function EmulatorContent() {
 					}
 					break;
 
-				case "stateSaved":
-					console.log("[Emulator] State saved");
-					showToast("Game saved!", "success");
+				case "stateSaved": {
+					const slot = (data as { slot?: number }).slot;
+					console.log("[Emulator] State saved", slot);
+					showToast(slot ? `Saved to slot ${slot}` : "Game saved!", "success");
 					break;
+				}
 
-				case "stateLoaded":
-					console.log("[Emulator] State loaded");
-					showToast("Game loaded!", "success");
+				case "stateLoaded": {
+					const slot = (data as { slot?: number }).slot;
+					console.log("[Emulator] State loaded", slot);
+					showToast(slot ? `Loaded slot ${slot}` : "Game loaded!", "success");
 					break;
+				}
+
+				case "stateLoadFailed": {
+					const { slot, reason } = data as { slot?: number; reason?: string };
+					showToast(
+						reason === "empty" ? `Slot ${slot ?? 0} is empty` : `Couldn't load slot ${slot ?? 0}`,
+						reason === "empty" ? "info" : "error"
+					);
+					break;
+				}
 
 				case "srmSaveComplete":
 					console.log("[Emulator] SRM save complete", data);
@@ -483,14 +522,26 @@ export function EmulatorContent() {
 					<div className="flex items-center gap-2 md:gap-4 shrink-0">
 						{showControls && emulatorState === "playing" && (
 							<>
+								<select
+									aria-label="Save slot"
+									value={saveSlot}
+									onChange={(e) => chooseSlot(Number(e.target.value))}
+									className="px-2 py-2 text-xs md:text-sm bg-zinc-800 hover:bg-zinc-700 rounded-lg min-h-[44px]"
+								>
+									{SAVE_SLOTS.map((slot) => (
+										<option key={slot} value={slot}>
+											Slot {slot}
+										</option>
+									))}
+								</select>
 								<button
-									onClick={() => sendToEmulator({ type: "saveState" })}
+									onClick={() => sendToEmulator({ type: "saveState", slot: saveSlot })}
 									className="px-3 py-2 text-xs md:text-sm bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors min-h-[44px]"
 								>
 									💾 Save
 								</button>
 								<button
-									onClick={() => sendToEmulator({ type: "loadState" })}
+									onClick={() => sendToEmulator({ type: "loadState", slot: saveSlot })}
 									className="px-3 py-2 text-xs md:text-sm bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors min-h-[44px]"
 								>
 									📂 Load
