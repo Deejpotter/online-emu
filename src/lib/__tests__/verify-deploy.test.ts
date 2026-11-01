@@ -17,6 +17,7 @@ const healthy: Record<string, Route> = {
 	"/api/status": { status: 200, type: "application/json", body: '{"success":true}' },
 	"/emulator.html": { status: 200, type: "text/html; charset=utf-8", body: "<html>v2</html>" },
 	"/save-guard.js": { status: 200, type: "application/javascript" },
+	"/controls.js": { status: 200, type: "application/javascript" },
 	"/emulatorjs/data/loader.js": { status: 200, type: "application/javascript" },
 	"/sw.js": { status: 200, type: "application/javascript" },
 };
