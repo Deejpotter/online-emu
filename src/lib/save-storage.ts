@@ -27,17 +27,25 @@ function srmFileName(gameId: string): string {
 	return `${gameId}.srm`;
 }
 
+/**
+ * Root folder for saves in R2. Staging sets R2_SAVE_PREFIX so it never
+ * reads or overwrites production saves in the shared bucket.
+ */
+function savePrefix(): string {
+	return (process.env.R2_SAVE_PREFIX || "online-emu").replace(/\/+$/, "");
+}
+
 function saveR2Key(
 	profileId: string,
 	system: string,
 	gameId: string,
 	slot: string
 ): string {
-	return `online-emu/saves/${profileId}/${system}/${saveFileName(gameId, slot)}`;
+	return `${savePrefix()}/saves/${profileId}/${system}/${saveFileName(gameId, slot)}`;
 }
 
 function srmR2Key(profileId: string, system: string, gameId: string): string {
-	return `online-emu/srm/${profileId}/${system}/${srmFileName(gameId)}`;
+	return `${savePrefix()}/srm/${profileId}/${system}/${srmFileName(gameId)}`;
 }
 
 function profileSavePath(
