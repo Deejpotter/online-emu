@@ -485,7 +485,8 @@ export function EmulatorContent() {
 					${showControls ? "p-3 md:p-4" : "p-1"}
 				`}
 			>
-				<div className="container mx-auto flex items-center justify-between gap-2">
+				{/* Wraps on narrow screens: Back + title on one row, the actions below */}
+				<div className="container mx-auto flex flex-wrap items-center justify-between gap-2">
 					{/* Left side - Back + Title */}
 					<div className="flex items-center gap-2 md:gap-4 min-w-0">
 						{/* Full page load on purpose: tears down EmulatorJS globals and audio. */}
@@ -513,7 +514,7 @@ export function EmulatorContent() {
 					</div>
 
 					{/* Right side - Actions */}
-					<div className="flex items-center gap-2 md:gap-4 shrink-0">
+					<div className="flex flex-wrap items-center justify-end gap-2 md:gap-4">
 						{showControls && emulatorState === "playing" && (
 							<>
 								<select

@@ -27,7 +27,8 @@ branch from `main`, implement with a test, run `jest`, `eslint` and
 | 10 | `verify:deploy` ignores the bot-detection script Cloudflare injects into HTML; staging app `online-emu-staging` created and verified | #23, #24 |
 | 11 | Saves/SRM APIs reject unknown profile ids (401); EmulatorJS pinned to 4.2.3 (CDN files match the committed copy); Docker build uses the image's yarn instead of fetching it; CI typechecks; 0 `tsc` errors, 0 lint warnings, 0 `act` warnings | #26, #27 |
 | 12 | Manual save slots 1 to 3 on the play page (slot 0 stays the automatic save); the chosen slot is remembered; loading an empty slot is reported | #28, #29 |
-| 13 | Controls: one shared keyboard layout (`public/controls.js`) for EmulatorJS, the hint and key forwarding (Select works, X = A, Z = B); Space and an on-screen button toggle fast-forward; forwarded keys used the wrong button numbers | see PR |
+| 13 | Controls: one shared keyboard layout (`public/controls.js`) for EmulatorJS, the hint and key forwarding (Select works, X = A, Z = B); Space and an on-screen button toggle fast-forward; forwarded keys used the wrong button numbers | #30, #29 |
+| 14 | Readable in light mode: leftover starter CSS turned text near-black on the dark UI for any browser in light mode (titles, headings, buttons); Geist font now applies; play page header wraps on phones instead of overflowing | see PR |
 
 ## Next up (candidates)
 

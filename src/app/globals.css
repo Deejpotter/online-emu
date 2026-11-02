@@ -1,8 +1,14 @@
 @import "tailwindcss";
 
+/*
+ * The app is dark-only. These used to switch to dark text when the browser
+ * was in light mode, and because this CSS is unlayered it beat Tailwind's
+ * text-zinc-* utilities, leaving near-black text on the dark UI.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #09090b;
+  --foreground: #f4f4f5;
+  color-scheme: dark;
 }
 
 @theme inline {
@@ -12,17 +18,10 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
 
 /* Hide scrollbar but keep functionality */
