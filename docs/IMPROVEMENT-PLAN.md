@@ -26,7 +26,8 @@ branch from `main`, implement with a test, run `jest`, `eslint` and
 | 9 | Release pipeline: CI (lint, test, build) on PRs into `dev` and `main`; `npm run verify:deploy <url>` post-deploy check; `R2_SAVE_PREFIX` so staging keeps its own saves | #22 |
 | 10 | `verify:deploy` ignores the bot-detection script Cloudflare injects into HTML; staging app `online-emu-staging` created and verified | #23, #24 |
 | 11 | Saves/SRM APIs reject unknown profile ids (401); EmulatorJS pinned to 4.2.3 (CDN files match the committed copy); Docker build uses the image's yarn instead of fetching it; CI typechecks; 0 `tsc` errors, 0 lint warnings, 0 `act` warnings | #26, #27 |
-| 12 | Manual save slots 1 to 3 on the play page (slot 0 stays the automatic save); the chosen slot is remembered; loading an empty slot is reported | see PR |
+| 12 | Manual save slots 1 to 3 on the play page (slot 0 stays the automatic save); the chosen slot is remembered; loading an empty slot is reported | #28, #29 |
+| 13 | Controls: one shared keyboard layout (`public/controls.js`) for EmulatorJS, the hint and key forwarding (Select works, X = A, Z = B); Space and an on-screen button toggle fast-forward; forwarded keys used the wrong button numbers | see PR |
 
 ## Next up (candidates)
 
@@ -34,6 +35,11 @@ branch from `main`, implement with a test, run `jest`, `eslint` and
 
 1. **Smoke test the player in CI**: a Playwright check that loads `/play` with a test ROM and confirms the `ready` message, once a legal test ROM and cores are available in CI.
 2. **Closing the tab still can't guarantee a save**: `pagehide`/`beforeunload` uploads can be cancelled by the browser. The Back button now saves first; closing the tab relies on the 60s auto-save and tab-hidden save.
+
+### Next
+
+1. **`verify:deploy` should retry transient 5xx** for a couple of minutes: run 20s after Coolify reports "finished", it hit 503 during the container switch-over.
+2. **Remappable keys**: a small settings panel that writes to the shared layout per profile.
 
 ### Library and code health
 

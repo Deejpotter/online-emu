@@ -32,6 +32,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import type { Game, EmulatorSystem } from "@/types";
 import { useToast } from "@/app/components";
+import { KEYBOARD_MAP, FAST_FORWARD_CODE, controlsHint } from "@/lib/controls";
 
 /**
  * Message types sent TO the emulator iframe
@@ -50,7 +51,7 @@ interface EmulatorAnalogMessage {
 }
 
 interface EmulatorControlMessage {
-	type: "saveState" | "loadState" | "pause" | "resume" | "getCanvas" | "flushSave";
+	type: "saveState" | "loadState" | "pause" | "resume" | "getCanvas" | "flushSave" | "toggleFastForward";
 	/** Save slot for saveState/loadState; 0 is the automatic slot */
 	slot?: number;
 }
@@ -97,6 +98,7 @@ type EmulatorIncomingMessage =
 	| { type: "serverSaveComplete"; success?: boolean }
 	| { type: "autoSaveDisabled"; kind?: "state" | "srm" }
 	| { type: "flushSaveComplete"; state?: boolean; srm?: boolean }
+	| { type: "fastForwardChanged"; on?: boolean }
 	| { type: "canvasInfo"; width: number; height: number };
 
 /**
@@ -113,25 +115,6 @@ const SYSTEM_TO_CORE: Record<EmulatorSystem, string> = {
 	n64: "n64",
 };
 
-/**
- * Keyboard to button mapping for local play
- */
-const KEYBOARD_MAP: Record<string, string> = {
-	ArrowUp: "up",
-	ArrowDown: "down",
-	ArrowLeft: "left",
-	ArrowRight: "right",
-	KeyZ: "a",
-	KeyX: "b",
-	KeyA: "x",
-	KeyS: "y",
-	KeyQ: "l",
-	KeyW: "r",
-	Enter: "start",
-	ShiftRight: "select",
-	ShiftLeft: "select",
-	Space: "a", // Alternative for A button
-};
 
 /** Manual save slots; slot 0 is reserved for the automatic save */
 const SAVE_SLOTS = [1, 2, 3] as const;
@@ -160,6 +143,7 @@ export function EmulatorContent() {
 	const leaveResolverRef = useRef<(() => void) | null>(null);
 	const [leaving, setLeaving] = useState(false);
 	const [saveSlot, setSaveSlot] = useState<number>(SAVE_SLOTS[0]);
+	const [fastForward, setFastForward] = useState(false);
 
 	// Remember the chosen slot across games; storage may be unavailable
 	useEffect(() => {
@@ -288,6 +272,10 @@ export function EmulatorContent() {
 					}
 					break;
 
+				case "fastForwardChanged":
+					setFastForward(Boolean((data as { on?: boolean }).on));
+					break;
+
 				case "flushSaveComplete":
 					leaveResolverRef.current?.();
 					break;
@@ -332,6 +320,12 @@ export function EmulatorContent() {
 	 */
 	const handleKeyDown = useCallback(
 		(event: KeyboardEvent) => {
+			// Same fast-forward shortcut as inside the game, for when the page has focus
+			if (event.code === FAST_FORWARD_CODE) {
+				event.preventDefault();
+				if (!event.repeat) sendToEmulator({ type: "toggleFastForward" });
+				return;
+			}
 			const button = KEYBOARD_MAP[event.code];
 			if (button) {
 				event.preventDefault();
@@ -546,6 +540,16 @@ export function EmulatorContent() {
 								>
 									📂 Load
 								</button>
+								<button
+									onClick={() => sendToEmulator({ type: "toggleFastForward" })}
+									aria-pressed={fastForward}
+									title="Fast-forward (Space)"
+									className={`px-3 py-2 text-xs md:text-sm rounded-lg transition-colors min-h-[44px] ${
+										fastForward ? "bg-amber-600 hover:bg-amber-500" : "bg-zinc-800 hover:bg-zinc-700"
+									}`}
+								>
+									⏩ Fast
+								</button>
 							</>
 						)}
 
@@ -573,8 +577,7 @@ export function EmulatorContent() {
 				{/* Keyboard controls hint - only on desktop when expanded */}
 				{showControls && (
 					<p className="hidden md:block text-center text-xs text-zinc-500 mt-2">
-						<strong>Keyboard:</strong> Arrows = D-Pad, Z = A, X = B, A = X, S =
-						Y, Q/W = L/R, Enter = Start, Shift = Select
+						<strong>Keyboard:</strong> {controlsHint()}
 					</p>
 				)}
 			</header>

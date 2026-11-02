@@ -123,6 +123,7 @@
     <!-- EmulatorJS container -->
     <div id="game"></div>
 
+    <script src="/controls.js"></script>
     <script src="/save-guard.js"></script>
     <script>
         /**
@@ -572,6 +573,43 @@
         // Why the last loadFromServer() returned false: 'empty' (no save) or 'error'
         let lastLoadStatus = 'ok';
 
+        // Fast-forward toggle: the on-screen button and the Space key both come here,
+        // so the button's state always matches the game
+        function setFastForward(on, opts) {
+            const ejs = window.EJS_emulator;
+            if (!ejs || typeof ejs.changeSettingOption !== 'function') return;
+            try {
+                ejs.changeSettingOption('fastForward', on ? 'enabled' : 'disabled');
+            } catch (err) {
+                console.warn('[EmulatorJS] Fast-forward toggle failed:', err);
+                return;
+            }
+            if (!(opts && opts.quiet) && typeof ejs.displayMessage === 'function') {
+                ejs.displayMessage(on ? 'FAST-FORWARD ON' : 'FAST-FORWARD OFF');
+            }
+            sendToParent({ type: 'fastForwardChanged', on: !!on });
+        }
+
+        function toggleFastForward() {
+            const ejs = window.EJS_emulator;
+            setFastForward(!(ejs && ejs.isFastForward));
+        }
+
+        // Space toggles fast-forward. Capture it before EmulatorJS/RetroArch sees it, because
+        // RetroArch's own Space hotkey toggles fast-forward without telling the page.
+        const FF_CODE = (window.EmuControls && window.EmuControls.FAST_FORWARD_CODE) || 'Space';
+        window.addEventListener('keydown', function (event) {
+            if (event.code !== FF_CODE) return;
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            if (!event.repeat) toggleFastForward();
+        }, true);
+        window.addEventListener('keyup', function (event) {
+            if (event.code !== FF_CODE) return;
+            event.preventDefault();
+            event.stopImmediatePropagation();
+        }, true);
+
         function sendToParent(message) {
             if (window.parent && window.parent !== window) {
                 window.parent.postMessage(message, window.location.origin);
@@ -639,6 +677,11 @@
         // window.EJS_DEBUG_XX = true;
 
         // Language settings - disable auto-detection to prevent 404 issues
+        // Keyboard layout shared with the play page (public/controls.js)
+        if (window.EmuControls) {
+            window.EJS_defaultControls = window.EmuControls.toEmulatorJSControls();
+        }
+
         window.EJS_language = 'en-US';
         window.EJS_disableAutoLang = true;
 
@@ -887,6 +930,19 @@
             loadingEl.classList.add('ejs-ready');
             sendToParent({ type: 'stateChanged', state: 'ready' });
 
+            // Replace saved per-game mappings once whenever the shared layout changes
+            try {
+                const ejs = window.EJS_emulator;
+                const version = window.EmuControls && String(window.EmuControls.CONTROLS_VERSION);
+                if (ejs && version && localStorage.getItem('online-emu:controls-version') !== version) {
+                    ejs.controls = JSON.parse(JSON.stringify(window.EmuControls.toEmulatorJSControls()));
+                    localStorage.setItem('online-emu:controls-version', version);
+                    console.log('[EmulatorJS] Applied keyboard layout v' + version);
+                }
+            } catch (err) {
+                console.warn('[EmulatorJS] Could not apply keyboard layout:', err);
+            }
+
             // Make left analog stick the default movement control (joystick-first)
             // - This helps users with a broken D-pad by routing LEFT_STICK -> directional inputs
             // - We patch the in-emulator control map at runtime and persist the setting
@@ -919,6 +975,8 @@
         // Callbacks
         window.EJS_onGameStart = async function () {
             console.log('[EmulatorJS] Game started');
+            // EmulatorJS remembers the fast-forward setting per game; always start at normal speed
+            setFastForward(false, { quiet: true });
             loadingEl.classList.add('hidden');
 
             // Try to get canvas dimensions
@@ -1091,28 +1149,11 @@
 
         // Button mapping: EmulatorJS button IDs
         // These vary by system, but common ones:
-        const BUTTON_MAP = {
-            // Standard gamepad
-            'a': 0,
-            'b': 1,
-            'x': 2,
-            'y': 3,
-            'l': 4,
-            'r': 5,
-            'select': 8,
-            'start': 9,
-            'up': 12,
-            'down': 13,
-            'left': 14,
-            'right': 15,
-            // N64 specific
-            'z': 6,
-            'l2': 6,  // Z trigger as L2
-            'r2': 7,  // Alias for R
-            // Analog stick clicks
-            'l3': 10,
-            'r3': 11,
-        };
+        // Button name -> EmulatorJS button slot (what simulateInput expects), from the shared layout
+        const BUTTON_MAP = { l2: 12, r2: 13 };
+        if (window.EmuControls) {
+            for (const entry of window.EmuControls.LAYOUT) BUTTON_MAP[entry.button] = entry.index;
+        }
 
         // Handle incoming messages from parent
         window.addEventListener('message', function (event) {
@@ -1151,6 +1192,10 @@
                     });
                     break;
                 }
+
+                case 'toggleFastForward':
+                    toggleFastForward();
+                    break;
 
                 case 'flushSave':
                     // Leaving the game: save through the guard so an unrestored save is never overwritten

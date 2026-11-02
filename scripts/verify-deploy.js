@@ -24,6 +24,7 @@ const { execFileSync } = require("child_process");
 const PLAYER_ASSETS = [
 	{ path: "/emulator.html", type: "text/html" },
 	{ path: "/save-guard.js", type: "javascript" },
+	{ path: "/controls.js", type: "javascript" },
 	{ path: "/emulatorjs/data/loader.js", type: "javascript" },
 	{ path: "/sw.js", type: "javascript" },
 ];
