@@ -32,7 +32,7 @@ export default function manifest(): MetadataRoute.Manifest {
 				src: "/icon-192x192.png",
 				sizes: "192x192",
 				type: "image/png",
-				purpose: "maskable",
+				purpose: "any",
 			},
 			{
 				src: "/icon-512x512.png",
@@ -40,20 +40,12 @@ export default function manifest(): MetadataRoute.Manifest {
 				type: "image/png",
 				purpose: "any",
 			},
-		],
-		// Screenshots for app store listings (optional)
-		screenshots: [
 			{
-				src: "/screenshot-game-library.png",
-				sizes: "1280x720",
+				// Full-bleed tile, controller inside the central 80% safe zone.
+				src: "/icon-maskable-512x512.png",
+				sizes: "512x512",
 				type: "image/png",
-				label: "Game Library",
-			},
-			{
-				src: "/screenshot-gameplay.png",
-				sizes: "1280x720",
-				type: "image/png",
-				label: "Gameplay",
+				purpose: "maskable",
 			},
 		],
 		// Shortcuts for quick actions from home screen icon

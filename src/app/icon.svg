@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- The app icon (public/icon-512x512.png) with the controller enlarged so it reads at 16-32 px. -->
+  <rect width="512" height="512" rx="72" fill="#18181B"/>
+  <g transform="translate(256 236) scale(1.4) translate(-256 -229)">
+    <path d="M198 136C184 136 170 142 160 150C146 185 126 240 123 292C122 315 138 326 156 322C176 316 192 296 206 283C221 272 238 270 256 270C274 270 291 272 306 283C320 296 336 316 356 322C374 326 390 315 389 292C386 240 366 185 352 150C342 142 328 136 314 136C305 137 296 146 288 152C278 158 268 158 256 158C244 158 234 158 224 152C216 146 207 137 198 136Z" fill="#FFFFFF"/>
+    <circle cx="256" cy="197" r="17" fill="#18181B"/>
+  </g>
+</svg>

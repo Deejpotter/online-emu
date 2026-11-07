@@ -27,14 +27,27 @@ import "./globals.css";
 const geistSans = GeistSans;
 const geistMono = GeistMono;
 
+const APP_NAME = "Online Emulator";
+const DESCRIPTION = "Self-hosted game console emulator with mobile streaming support";
+
 export const metadata: Metadata = {
-	title: "Online Emulator",
-	description:
-		"Self-hosted game console emulator with mobile streaming support",
+	metadataBase: new URL("https://roms.deejpotter.com"),
+	title: APP_NAME,
+	description: DESCRIPTION,
+	applicationName: APP_NAME,
 	keywords: ["emulator", "gaming", "retro", "streaming", "remote play", "pwa"],
-	// PWA specific metadata
+	// Private app: keep it out of search engines.
+	robots: { index: false, follow: false },
+	// Icons come from the file conventions in src/app (icon.svg, favicon.ico, apple-icon.png).
 	// Next.js generates manifest at /manifest.webmanifest via src/app/manifest.ts
 	manifest: "/manifest.webmanifest",
+	openGraph: {
+		type: "website",
+		siteName: APP_NAME,
+		title: APP_NAME,
+		description: DESCRIPTION,
+		images: [{ url: "/icon-512x512.png", width: 512, height: 512, alt: APP_NAME }],
+	},
 	appleWebApp: {
 		capable: true,
 		statusBarStyle: "black-translucent",
@@ -51,7 +64,11 @@ export const viewport: Viewport = {
 	maximumScale: 1,
 	userScalable: false, // Prevent zoom on mobile for better game controls
 	viewportFit: "cover", // Support for notched devices
-	themeColor: "#18181b", // zinc-900
+	// The app is dark in both colour schemes, so both use zinc-900.
+	themeColor: [
+		{ media: "(prefers-color-scheme: light)", color: "#18181b" },
+		{ media: "(prefers-color-scheme: dark)", color: "#18181b" },
+	],
 };
 
 export default function RootLayout({
@@ -62,17 +79,8 @@ export default function RootLayout({
 	return (
 		<html lang="en">
 			<head>
-				{/* PWA Icons */}
-				<link rel="icon" href="/icon-192x192.png" sizes="192x192" />
-				<link rel="apple-touch-icon" href="/icon-192x192.png" />
-
-				{/* iOS PWA specific */}
+				{/* iOS PWA specific (appleWebApp emits the title and status bar style) */}
 				<meta name="apple-mobile-web-app-capable" content="yes" />
-				<meta
-					name="apple-mobile-web-app-status-bar-style"
-					content="black-translucent"
-				/>
-				<meta name="apple-mobile-web-app-title" content="OnlineEmu" />
 
 				{/* Windows PWA */}
 				<meta name="msapplication-TileColor" content="#18181b" />
