@@ -116,6 +116,26 @@ const SYSTEM_TO_CORE: Record<EmulatorSystem, string> = {
 };
 
 
+/**
+ * Phones and other touch or short screens. Width alone misses a phone in
+ * landscape (wider than md but under 500px tall), where the header would
+ * take half the height and cover the on-screen L/R buttons.
+ */
+const COMPACT_QUERY = "(pointer: coarse), (max-height: 500px)";
+
+function useCompactLayout(): boolean {
+	const [compact, setCompact] = useState(false);
+	useEffect(() => {
+		if (typeof window.matchMedia !== "function") return;
+		const mq = window.matchMedia(COMPACT_QUERY);
+		const update = () => setCompact(mq.matches);
+		update();
+		mq.addEventListener?.("change", update);
+		return () => mq.removeEventListener?.("change", update);
+	}, []);
+	return compact;
+}
+
 /** Manual save slots; slot 0 is reserved for the automatic save */
 const SAVE_SLOTS = [1, 2, 3] as const;
 const SLOT_KEY = "online-emu:save-slot";
@@ -136,6 +156,17 @@ export function EmulatorContent() {
 		"loading" | "ready" | "playing" | "paused"
 	>("loading");
 	const [showControls, setShowControls] = useState(true);
+	const compact = useCompactLayout();
+	const autoCollapsedRef = useRef(false);
+
+	// On phones, give the game the screen once it starts (once per visit, so
+	// the toggle still works); desktop keeps the header
+	useEffect(() => {
+		if (compact && emulatorState === "playing" && !autoCollapsedRef.current) {
+			autoCollapsedRef.current = true;
+			setShowControls(false);
+		}
+	}, [compact, emulatorState]);
 	const iframeRef = useRef<HTMLIFrameElement>(null);
 	const containerRef = useRef<HTMLDivElement>(null);
 	const saveFailuresRef = useRef(0);
@@ -563,10 +594,10 @@ export function EmulatorContent() {
 							⛶ Full
 						</button>
 
-						{/* Toggle header visibility on mobile */}
+						{/* Toggle header visibility: narrow screens and any compact (touch or short) screen */}
 						<button
 							onClick={() => setShowControls(!showControls)}
-							className="md:hidden px-3 py-2 text-xs bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors min-h-[44px]"
+							className={`${compact ? "" : "md:hidden "}px-3 py-2 text-xs bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors min-h-[44px]`}
 							title={showControls ? "Hide controls" : "Show controls"}
 							aria-label={showControls ? "Hide controls" : "Show controls"}
 						>
@@ -575,8 +606,8 @@ export function EmulatorContent() {
 					</div>
 				</div>
 
-				{/* Keyboard controls hint - only on desktop when expanded */}
-				{showControls && (
+				{/* Keyboard controls hint - desktop only (no keyboard on touch screens) */}
+				{showControls && !compact && (
 					<p className="hidden md:block text-center text-xs text-zinc-500 mt-2">
 						<strong>Keyboard:</strong> {controlsHint()}
 					</p>
